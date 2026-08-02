@@ -44,6 +44,8 @@ Live SSH validation found and corrected a nested-symlink resolution bug in the f
 
 The sanitized regression fixture is `tests/TelemetryLoom.Core.Tests/TestData/cachyos-amd.json`.
 
+After installing the Arch ASP.NET Core targeting and runtime packs, the complete solution restored and all 18 tests passed on the CachyOS host. A production-mode localhost smoke test returned `available` from `/api/status`, reporting 13 sensors and the `hwmon` and `simulated` collectors. `/api/sensors` returned 12 live hwmon readings plus the simulated sensor with canonical stable IDs and normalized units. The temporary test service was stopped afterward.
+
 ## Immediate next decision
 
 Merge Milestone 2 after CI passes, then design Milestone 3 around durable user aliases stored in a versioned JSON configuration file. Aliases must bind to stable sensor IDs while retaining enough metadata to diagnose missing or changed hardware.
