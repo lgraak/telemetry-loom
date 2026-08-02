@@ -6,6 +6,15 @@ namespace TelemetryLoom.Core.Tests;
 public sealed class UnitCatalogTests
 {
     [Fact]
+    public void CatalogDefinesEveryUnitCode()
+    {
+        foreach (var code in Enum.GetValues<UnitCode>())
+        {
+            Assert.Equal(code, UnitCatalog.Get(code).Code);
+        }
+    }
+
+    [Fact]
     public void TemperatureUnitsAreCompatible()
     {
         Assert.True(UnitCatalog.AreCompatible(UnitCode.Celsius, UnitCode.Fahrenheit));

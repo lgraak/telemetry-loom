@@ -21,6 +21,7 @@ public static class UnitCatalog
             [UnitCode.Volts] = new(UnitCode.Volts, QuantityKind.Voltage, "V"),
             [UnitCode.Amperes] = new(UnitCode.Amperes, QuantityKind.Current, "A"),
             [UnitCode.Hertz] = new(UnitCode.Hertz, QuantityKind.Frequency, "Hz"),
+            [UnitCode.Megahertz] = new(UnitCode.Megahertz, QuantityKind.Frequency, "MHz"),
             [UnitCode.Megabytes] = new(UnitCode.Megabytes, QuantityKind.DataSize, "MB")
         };
 

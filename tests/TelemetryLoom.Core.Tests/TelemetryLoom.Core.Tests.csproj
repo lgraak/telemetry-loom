@@ -21,6 +21,13 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\TelemetryLoom.Contracts\TelemetryLoom.Contracts.csproj" />
     <ProjectReference Include="..\..\src\TelemetryLoom.Core\TelemetryLoom.Core.csproj" />
+    <ProjectReference Include="..\..\src\TelemetryLoom.Collectors.Linux\TelemetryLoom.Collectors.Linux.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="TestData\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

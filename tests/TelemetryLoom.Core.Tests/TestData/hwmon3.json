@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-02T12:00:00Z",
+  "rootPath": "/sys/class/hwmon",
+  "devices": [
+    {
+      "className": "hwmon3",
+      "driverName": "nct6798",
+      "deviceLabel": "Mainboard",
+      "hardwarePath": "/sys/devices/platform/nct6775.656/hwmon/hwmon3",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "30000",
+        "temp1_label": "Radiator Intake",
+        "temp2_input": "40000",
+        "temp2_label": "Radiator Exhaust",
+        "temp2_fault": "1",
+        "fan1_input": "1250",
+        "fan1_label": "Radiator Fans",
+        "in0_input": "1200",
+        "curr1_input": "2500",
+        "power1_input": "150000000",
+        "power1_average": "145000000",
+        "freq1_input": "1500000000",
+        "humidity1_input": "45500"
+      }
+    }
+  ]
+}
