@@ -20,8 +20,8 @@ Temperature and other units are structured metadata. Collectors preserve a canon
 ## Milestone status
 
 1. Repository foundation and simulated sensor: complete
-2. Linux hwmon discovery and stable identity: complete on branch `codex/milestone-2-hwmon`
-3. Aliases and JSON configuration persistence: next
+2. Linux hwmon discovery and stable identity: complete and merged in PR #1
+3. Aliases and JSON configuration persistence: implemented on branch `codex/milestone-3-aliases`; awaiting live Linux validation
 4. Unit-aware arithmetic formulas
 5. Live API updates
 6. InfoPanel plugin
@@ -46,6 +46,12 @@ The sanitized regression fixture is `tests/TelemetryLoom.Core.Tests/TestData/cac
 
 After installing the Arch ASP.NET Core targeting and runtime packs, the complete solution restored and all 18 tests passed on the CachyOS host. A production-mode localhost smoke test returned `available` from `/api/status`, reporting 13 sensors and the `hwmon` and `simulated` collectors. `/api/sensors` returned 12 live hwmon readings plus the simulated sensor with canonical stable IDs and normalized units. The temporary test service was stopped afterward.
 
-## Immediate next decision
+## Milestone 3 design
 
-Merge Milestone 2 after CI passes, then design Milestone 3 around durable user aliases stored in a versioned JSON configuration file. Aliases must bind to stable sensor IDs while retaining enough metadata to diagnose missing or changed hardware.
+- Alias keys are user-owned lowercase identifiers such as `cooling.air.intake`; display names are separate and freely renameable.
+- Collectors do not assign aliases. Aliases bind one-to-one to stable sensor IDs.
+- Version 1 JSON persistence snapshots quantity, unit, symbol, and source so missing hardware remains represented as an unavailable sensor.
+- Writes flush a same-directory temporary file and atomically replace the active configuration before updating in-memory state.
+- User services default to the XDG configuration directory. A future system package can override `TelemetryLoom__ConfigPath` to `/var/lib/telemetry-loom/config.json`.
+- The localhost API supports alias list, lookup, upsert, delete, and sensor lookup by alias.
+- Formulas and unit conversion remain Milestone 4 work.

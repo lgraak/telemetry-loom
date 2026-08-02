@@ -1,0 +1,93 @@
+using TelemetryLoom.Contracts.Aliases;
+using TelemetryLoom.Contracts.Sensors;
+using TelemetryLoom.Core.Sensors;
+
+namespace TelemetryLoom.Core.Aliases;
+
+public sealed class AliasedSensorCatalog(
+    SensorCatalog sensorCatalog,
+    SensorAliasRegistry aliasRegistry)
+{
+    public IReadOnlyList<string> SourceNames => sensorCatalog.SourceNames;
+
+    public IReadOnlyList<SensorReading> GetSensors()
+    {
+        var aliases = aliasRegistry.GetDefinitions();
+        var aliasesBySensorId = aliases.ToDictionary(alias => alias.SensorId, StringComparer.Ordinal);
+        var seenSensorIds = new HashSet<string>(StringComparer.Ordinal);
+        var sensors = new List<SensorReading>();
+
+        foreach (var sensor in sensorCatalog.GetSensors())
+        {
+            seenSensorIds.Add(sensor.Id);
+            sensors.Add(aliasesBySensorId.TryGetValue(sensor.Id, out var alias)
+                ? ApplyAlias(sensor, alias)
+                : sensor);
+        }
+
+        sensors.AddRange(aliases
+            .Where(alias => !seenSensorIds.Contains(alias.SensorId))
+            .Select(CreateUnavailableReading));
+
+        return [.. sensors.OrderBy(sensor => sensor.Id, StringComparer.Ordinal)];
+    }
+
+    public SensorReading? GetSensor(string id)
+    {
+        var alias = aliasRegistry.GetDefinitions()
+            .FirstOrDefault(candidate => string.Equals(candidate.SensorId, id, StringComparison.Ordinal));
+        var sensor = sensorCatalog.GetSensor(id);
+
+        if (sensor is not null)
+        {
+            return alias is null ? sensor : ApplyAlias(sensor, alias);
+        }
+
+        return alias is null ? null : CreateUnavailableReading(alias);
+    }
+
+    public SensorReading? GetSensorByAlias(string key)
+    {
+        var alias = aliasRegistry.GetDefinitions()
+            .FirstOrDefault(candidate => string.Equals(candidate.Key, key, StringComparison.Ordinal));
+        return alias is null ? null : GetSensor(alias.SensorId);
+    }
+
+    private static SensorReading ApplyAlias(SensorReading sensor, SensorAliasDefinition alias) =>
+        sensor with
+        {
+            DisplayName = alias.DisplayName,
+            Alias = alias.Key,
+            Metadata = WithAliasMetadata(sensor.Metadata, alias.Key)
+        };
+
+    private static SensorReading CreateUnavailableReading(SensorAliasDefinition alias) =>
+        new(
+            alias.SensorId,
+            alias.DisplayName,
+            alias.Key,
+            null,
+            alias.Quantity,
+            alias.Unit,
+            alias.UnitSymbol,
+            alias.Source,
+            SensorStatus.Unavailable,
+            null,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["aliasKey"] = alias.Key,
+                ["boundSensorId"] = alias.SensorId,
+                ["missingReason"] = "Bound sensor is not currently available."
+            });
+
+    private static IReadOnlyDictionary<string, string> WithAliasMetadata(
+        IReadOnlyDictionary<string, string> metadata,
+        string aliasKey)
+    {
+        var decorated = new Dictionary<string, string>(metadata, StringComparer.Ordinal)
+        {
+            ["aliasKey"] = aliasKey
+        };
+        return decorated;
+    }
+}

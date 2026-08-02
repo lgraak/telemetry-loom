@@ -27,7 +27,7 @@ public sealed class SimulatedSensorSource(TimeProvider timeProvider) : ISensorSo
         return new SensorReading(
             TemperatureSensorId,
             "Simulated Temperature",
-            "demo.temperature",
+            null,
             30.0,
             unit.Quantity,
             unit.Code,
