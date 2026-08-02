@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using TelemetryLoom.Collectors.Linux.Hwmon;
 using TelemetryLoom.Core.Sensors;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +10,16 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddSingleton<SimulatedSensorSource>();
 builder.Services.AddSingleton<ISensorSource>(services =>
     services.GetRequiredService<SimulatedSensorSource>());
+
+var hwmonRoot = builder.Configuration["Hwmon:RootPath"] ?? SysfsHwmonSnapshotSource.DefaultRootPath;
+if (Directory.Exists(hwmonRoot))
+{
+    builder.Services.AddSingleton<IHwmonSnapshotSource>(new SysfsHwmonSnapshotSource(hwmonRoot));
+    builder.Services.AddSingleton<HwmonSensorSource>();
+    builder.Services.AddSingleton<ISensorSource>(services =>
+        services.GetRequiredService<HwmonSensorSource>());
+}
+
 builder.Services.AddSingleton<SensorCatalog>();
 
 var app = builder.Build();
@@ -22,7 +33,7 @@ app.MapGet("/api/status", (SensorCatalog catalog) => Results.Ok(new
     service = "telemetry-loom",
     status = "available",
     sensorCount = catalog.GetSensors().Count,
-    collectors = new[] { "simulated" }
+    collectors = catalog.SourceNames
 }));
 
 app.Run();

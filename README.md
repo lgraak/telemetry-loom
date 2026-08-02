@@ -6,15 +6,18 @@ The project is intentionally not an attempt to recreate HWiNFO. Its job is to si
 
 ## Current status
 
-Milestone 1 provides the repository foundation:
+Milestone 2 provides the repository foundation and initial Linux hwmon discovery:
 
 - a structured sensor model with quantity, unit, availability, and timestamp metadata
 - a simulated Celsius temperature sensor with the stable alias `demo.temperature`
+- read-only discovery of hwmon temperature, fan, voltage, current, power, frequency, and humidity channels
+- stable hwmon IDs based on the driver, normalized hardware path, sensor type, channel, and measurement
+- fixture capture and replay without requiring contributor hardware
 - a localhost HTTP API
 - a minimal browser status page
 - automated unit tests and GitHub Actions CI
 
-Hardware collectors, aliases, formulas, persistence, and the InfoPanel plugin are not implemented yet.
+NVML, aliases, formulas, persistence, and the InfoPanel plugin are not implemented yet.
 
 ## Architecture direction
 
@@ -63,10 +66,20 @@ The service must remain localhost-only by default. Remote access and authenticat
 dotnet test TelemetryLoom.slnx
 ```
 
+## Capture an hwmon fixture
+
+On the Linux machine whose sensors you want to test:
+
+```bash
+dotnet run --project src/TelemetryLoom.Hwmon.Capture -- hwmon-fixture.json
+```
+
+The command reads only standard hwmon identity, input, average, label, and fault attributes. Review the JSON before sharing it. See [docs/hwmon-fixtures.md](docs/hwmon-fixtures.md) for the captured fields and current limitations.
+
 ## Planned milestones
 
-1. Repository foundation and simulated sensor
-2. hwmon discovery and stable sensor identity
+1. Repository foundation and simulated sensor (complete)
+2. hwmon discovery and stable sensor identity (implemented; awaiting real-hardware fixture validation)
 3. aliases and JSON configuration persistence
 4. unit-aware arithmetic formulas
 5. live API updates

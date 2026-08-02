@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TelemetryLoom.Contracts\TelemetryLoom.Contracts.csproj" />
     <ProjectReference Include="..\TelemetryLoom.Core\TelemetryLoom.Core.csproj" />
+    <ProjectReference Include="..\TelemetryLoom.Collectors.Linux\TelemetryLoom.Collectors.Linux.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

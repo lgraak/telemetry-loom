@@ -6,6 +6,9 @@ public sealed class SensorCatalog(IEnumerable<ISensorSource> sources)
 {
     private readonly IReadOnlyList<ISensorSource> _sources = [.. sources];
 
+    public IReadOnlyList<string> SourceNames =>
+        [.. _sources.Select(source => source.Name).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
+
     public IReadOnlyList<SensorReading> GetSensors() =>
         [.. _sources.SelectMany(source => source.GetSensors()).OrderBy(sensor => sensor.Id, StringComparer.Ordinal)];
 
