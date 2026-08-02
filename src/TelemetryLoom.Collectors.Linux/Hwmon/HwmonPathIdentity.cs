@@ -6,7 +6,7 @@ namespace TelemetryLoom.Collectors.Linux.Hwmon;
 
 public static partial class HwmonPathIdentity
 {
-    [GeneratedRegex(@"/hwmon/hwmon\d+$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:/hwmon)?/hwmon\d+$", RegexOptions.IgnoreCase)]
     private static partial Regex HwmonSuffixRegex();
 
     [GeneratedRegex(@"[^a-z0-9]+", RegexOptions.IgnoreCase)]

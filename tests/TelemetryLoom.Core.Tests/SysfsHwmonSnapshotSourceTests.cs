@@ -5,6 +5,39 @@ namespace TelemetryLoom.Core.Tests;
 public sealed class SysfsHwmonSnapshotSourceTests
 {
     [Fact]
+    public void ResolvesDeviceLinkAfterCanonicalizingHwmonClassLink()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        var root = Path.Combine(Path.GetTempPath(), "telemetry-loom-tests", Guid.NewGuid().ToString("N"));
+        var classRoot = Path.Combine(root, "sys", "class", "hwmon");
+        var physicalDevice = Path.Combine(root, "sys", "devices", "pci0000:00", "0000:01:00.0");
+        var physicalHwmon = Path.Combine(physicalDevice, "hwmon", "hwmon7");
+        Directory.CreateDirectory(classRoot);
+        Directory.CreateDirectory(physicalHwmon);
+
+        try
+        {
+            File.WriteAllText(Path.Combine(physicalHwmon, "name"), "fixture_driver");
+            File.WriteAllText(Path.Combine(physicalHwmon, "temp1_input"), "32500");
+            Directory.CreateSymbolicLink(Path.Combine(physicalHwmon, "device"), physicalDevice);
+            Directory.CreateSymbolicLink(Path.Combine(classRoot, "hwmon7"), physicalHwmon);
+
+            var device = Assert.Single(new SysfsHwmonSnapshotSource(classRoot).Capture().Devices);
+
+            Assert.Equal(HwmonIdentityQuality.StableHardwarePath, device.IdentityQuality);
+            Assert.Equal(HwmonPathIdentity.NormalizeHardwarePath(physicalDevice), device.HardwarePath);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void CaptureIncludesOnlyRelevantReadOnlySensorAttributes()
     {
         var root = Path.Combine(Path.GetTempPath(), "telemetry-loom-tests", Guid.NewGuid().ToString("N"));

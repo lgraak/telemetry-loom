@@ -92,25 +92,29 @@ public sealed partial class SysfsHwmonSnapshotSource(
 
     private static string? ResolveDevicePath(string directory)
     {
-        foreach (var candidate in new[] { Path.Combine(directory, "device"), directory })
+        var resolvedDirectory = ResolveLink(directory);
+        if (resolvedDirectory is null)
         {
-            try
-            {
-                var resolved = new DirectoryInfo(candidate).ResolveLinkTarget(returnFinalTarget: true);
-                if (resolved is not null)
-                {
-                    return resolved.FullName;
-                }
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
+            return null;
         }
 
-        return null;
+        return ResolveLink(Path.Combine(resolvedDirectory, "device")) ?? resolvedDirectory;
+    }
+
+    private static string? ResolveLink(string path)
+    {
+        try
+        {
+            return new DirectoryInfo(path).ResolveLinkTarget(returnFinalTarget: true)?.FullName;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static string? ReadText(string path)

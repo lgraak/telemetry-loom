@@ -7,7 +7,7 @@
       "className": "hwmon0",
       "driverName": "acpitz_0",
       "deviceLabel": null,
-      "hardwarePath": "sys/class/thermal_zone0",
+      "hardwarePath": "virtual/thermal/thermal_zone0",
       "identityQuality": "StableHardwarePath",
       "attributes": {
         "temp1_input": "20000"
@@ -17,7 +17,7 @@
       "className": "hwmon1",
       "driverName": "nvme",
       "deviceLabel": null,
-      "hardwarePath": "sys/class/nvme0",
+      "hardwarePath": "pci0000:00/0000:00:02.1/0000:61:00.0/nvme/nvme0",
       "identityQuality": "StableHardwarePath",
       "attributes": {
         "temp1_input": "42850",
@@ -32,7 +32,7 @@
       "className": "hwmon2",
       "driverName": "amdgpu",
       "deviceLabel": null,
-      "hardwarePath": "sys/0000:65:00.0",
+      "hardwarePath": "pci0000:00/0000:00:08.1/0000:65:00.0",
       "identityQuality": "StableHardwarePath",
       "attributes": {
         "freq1_input": "1065000000",
@@ -52,7 +52,7 @@
       "className": "hwmon3",
       "driverName": "k10temp",
       "deviceLabel": null,
-      "hardwarePath": "sys/0000:00:18.3",
+      "hardwarePath": "pci0000:00/0000:00:18.3",
       "identityQuality": "StableHardwarePath",
       "attributes": {
         "temp1_input": "80125",
@@ -63,7 +63,7 @@
       "className": "hwmon4",
       "driverName": "iwlwifi_1_1",
       "deviceLabel": null,
-      "hardwarePath": "sys/class/thermal_zone1",
+      "hardwarePath": "virtual/thermal/thermal_zone1",
       "identityQuality": "StableHardwarePath",
       "attributes": {
         "temp1_input": "38000"
@@ -73,7 +73,7 @@
       "className": "hwmon5",
       "driverName": "hidpp_battery_0",
       "deviceLabel": null,
-      "hardwarePath": "sys/class/hidpp_battery_0",
+      "hardwarePath": "pci0000:00/0000:00:08.3/0000:67:00.4/usb7/7-1/7-1:1.2/0003:046D:C52B.0003/0003:046D:405E.0005/power_supply/hidpp_battery_0",
       "identityQuality": "StableHardwarePath",
       "attributes": {}
     }

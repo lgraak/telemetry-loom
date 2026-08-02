@@ -39,7 +39,7 @@ A real CachyOS capture found 6 hwmon devices, 21 relevant raw attributes, and 12
 
 The Logitech HID++ battery device is discovered but has no supported hwmon measurement attributes. Battery capacity should be handled by a future Linux power-supply collector rather than folded into hwmon.
 
-The capture's normalized hardware paths intentionally omit a leading slash and temporary `hwmonN` components. Stable IDs use driver, normalized hardware path, sensor type, channel, and measurement. Labels remain display metadata and do not affect identity.
+Live SSH validation found and corrected a nested-symlink resolution bug in the first capture. The canonical hardware paths now resolve through `/sys/class/hwmon/hwmonN` and its `device` link before normalization. Normalized paths intentionally omit the `/sys/devices/` prefix and temporary `hwmonN` components. Stable IDs use driver, normalized hardware path, sensor type, channel, and measurement. Labels remain display metadata and do not affect identity.
 
 The sanitized regression fixture is `tests/TelemetryLoom.Core.Tests/TestData/cachyos-amd.json`.
 
