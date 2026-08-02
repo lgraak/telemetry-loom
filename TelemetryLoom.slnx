@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TelemetryLoom.Contracts/TelemetryLoom.Contracts.csproj" />
+    <Project Path="src/TelemetryLoom.Core/TelemetryLoom.Core.csproj" />
+    <Project Path="src/TelemetryLoom.Service/TelemetryLoom.Service.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TelemetryLoom.Core.Tests/TelemetryLoom.Core.Tests.csproj" />
+  </Folder>
+</Solution>

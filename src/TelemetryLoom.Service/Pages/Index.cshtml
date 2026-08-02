@@ -1,0 +1,46 @@
+@page
+@{
+    ViewData["Title"] = "Telemetry Loom";
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Telemetry Loom</title>
+    <style>
+        :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+        body { max-width: 72rem; margin: 0 auto; padding: 3rem 1.5rem; background: #111827; color: #e5e7eb; }
+        h1 { margin-bottom: .25rem; }
+        p { color: #9ca3af; }
+        table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: #1f2937; }
+        th, td { padding: .8rem; text-align: left; border-bottom: 1px solid #374151; }
+        th { color: #93c5fd; }
+        code { color: #a7f3d0; }
+    </style>
+</head>
+<body>
+    <h1>Telemetry Loom</h1>
+    <p>Milestone 1 is running. This page shows the simulated sensor exposed by the local API.</p>
+    <table>
+        <thead><tr><th>Sensor</th><th>Alias</th><th>Value</th><th>Quantity</th><th>Status</th></tr></thead>
+        <tbody id="sensors"><tr><td colspan="5">Loading…</td></tr></tbody>
+    </table>
+    <script>
+        async function refresh() {
+            const response = await fetch('/api/sensors');
+            const sensors = await response.json();
+            document.querySelector('#sensors').innerHTML = sensors.map(sensor => `
+                <tr>
+                    <td><code>${sensor.id}</code><br>${sensor.displayName}</td>
+                    <td><code>${sensor.alias ?? ''}</code></td>
+                    <td>${sensor.value ?? '—'} ${sensor.unitSymbol}</td>
+                    <td>${sensor.quantity}</td>
+                    <td>${sensor.status}</td>
+                </tr>`).join('');
+        }
+        refresh();
+        setInterval(refresh, 1000);
+    </script>
+</body>
+</html>

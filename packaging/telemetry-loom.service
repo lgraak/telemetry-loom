@@ -1,0 +1,13 @@
+[Unit]
+Description=Telemetry Loom local sensor service
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/telemetry-loom
+Restart=on-failure
+RestartSec=3
+Environment=DOTNET_ENVIRONMENT=Production
+
+[Install]
+WantedBy=default.target

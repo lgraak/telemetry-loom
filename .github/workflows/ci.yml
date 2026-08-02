@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore TelemetryLoom.slnx
+      - run: dotnet build TelemetryLoom.slnx --configuration Release --no-restore
+      - run: dotnet test TelemetryLoom.slnx --configuration Release --no-build
