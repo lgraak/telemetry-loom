@@ -21,7 +21,7 @@ Temperature and other units are structured metadata. Collectors preserve a canon
 
 1. Repository foundation and simulated sensor: complete
 2. Linux hwmon discovery and stable identity: complete and merged in PR #1
-3. Aliases and JSON configuration persistence: implemented on branch `codex/milestone-3-aliases`; awaiting live Linux validation
+3. Aliases and JSON configuration persistence: complete on branch `codex/milestone-3-aliases`; awaiting PR merge
 4. Unit-aware arithmetic formulas
 5. Live API updates
 6. InfoPanel plugin
@@ -55,3 +55,14 @@ After installing the Arch ASP.NET Core targeting and runtime packs, the complete
 - User services default to the XDG configuration directory. A future system package can override `TelemetryLoom__ConfigPath` to `/var/lib/telemetry-loom/config.json`.
 - The localhost API supports alias list, lookup, upsert, delete, and sensor lookup by alias.
 - Formulas and unit conversion remain Milestone 4 work.
+
+## Milestone 3 validation
+
+- 28 tests pass on Windows and CachyOS, including HTTP API integration, JSON restart persistence, missing-hardware preservation, rename-while-missing behavior, invalid configuration rejection, and persistence-failure rollback.
+- A zero-warning Release build passes on Windows.
+- Live CachyOS validation created `cooling.air.intake` against the ACPI temperature sensor, resolved the aliased `20 °C` reading through `/api/sensors/by-alias/cooling.air.intake`, and verified the persisted schema-versioned JSON after restarting the service.
+- Both temporary service instances were stopped and all explicitly named validation files were removed.
+
+## Immediate next decision
+
+Merge the Milestone 3 PR after CI passes, then define Milestone 4's formula document and unit-compatibility rules. The first formula slice should support alias operands and basic arithmetic while requiring compatible canonical units.

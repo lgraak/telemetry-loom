@@ -93,7 +93,7 @@ See [docs/aliases.md](docs/aliases.md) for alias naming, API operations, configu
 
 1. Repository foundation and simulated sensor (complete)
 2. hwmon discovery and stable sensor identity (complete; validated on CachyOS with AMD CPU/GPU, NVMe, ACPI, and Intel Wi-Fi sensors)
-3. aliases and JSON configuration persistence (implemented; awaiting live Linux validation)
+3. aliases and JSON configuration persistence (complete; validated against live CachyOS hwmon data and across a service restart)
 4. unit-aware arithmetic formulas
 5. live API updates
 6. InfoPanel plugin
