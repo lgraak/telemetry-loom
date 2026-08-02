@@ -15,6 +15,7 @@ Temperature and other units are structured metadata. Collectors preserve a canon
 - Implementation: C# on .NET 10; specialized native collectors may be added later if justified
 - Linux runtime target, with Windows-supported development and tests
 - Localhost-only HTTP service by default
+- Arch/CachyOS requires `aspnet-targeting-pack-10.0` and `aspnet-runtime-10.0` in addition to `dotnet-sdk-10.0`; the SDK package alone can build the collector but not the ASP.NET service
 
 ## Milestone status
 

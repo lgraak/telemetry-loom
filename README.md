@@ -38,6 +38,12 @@ Units are structured data rather than arbitrary display strings. Initial calcula
 - .NET 10 SDK for the complete solution
 - Linux is the runtime target; development and tests also work on Windows
 
+On Arch Linux and derivatives, install the SDK plus the separately packaged ASP.NET Core targeting and runtime packs:
+
+```bash
+sudo pacman -Syu dotnet-sdk-10.0 aspnet-targeting-pack-10.0 aspnet-runtime-10.0
+```
+
 ## Run the current milestone
 
 ```bash
