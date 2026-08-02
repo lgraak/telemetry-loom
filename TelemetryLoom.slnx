@@ -1,7 +1,9 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/TelemetryLoom.Collectors.Linux/TelemetryLoom.Collectors.Linux.csproj" />
     <Project Path="src/TelemetryLoom.Contracts/TelemetryLoom.Contracts.csproj" />
     <Project Path="src/TelemetryLoom.Core/TelemetryLoom.Core.csproj" />
+    <Project Path="src/TelemetryLoom.Hwmon.Capture/TelemetryLoom.Hwmon.Capture.csproj" />
     <Project Path="src/TelemetryLoom.Service/TelemetryLoom.Service.csproj" />
   </Folder>
   <Folder Name="/tests/">

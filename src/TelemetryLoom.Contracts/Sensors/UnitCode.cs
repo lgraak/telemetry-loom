@@ -16,5 +16,6 @@ public enum UnitCode
     Volts,
     Amperes,
     Hertz,
+    Megahertz,
     Megabytes
 }
