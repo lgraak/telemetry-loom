@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-02T23:12:52.9661937+00:00",
+  "rootPath": "/sys/class/hwmon",
+  "devices": [
+    {
+      "className": "hwmon0",
+      "driverName": "acpitz_0",
+      "deviceLabel": null,
+      "hardwarePath": "sys/class/thermal_zone0",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "20000"
+      }
+    },
+    {
+      "className": "hwmon1",
+      "driverName": "nvme",
+      "deviceLabel": null,
+      "hardwarePath": "sys/class/nvme0",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "42850",
+        "temp1_label": "Composite",
+        "temp2_input": "42850",
+        "temp2_label": "Sensor 1",
+        "temp3_input": "35850",
+        "temp3_label": "Sensor 2"
+      }
+    },
+    {
+      "className": "hwmon2",
+      "driverName": "amdgpu",
+      "deviceLabel": null,
+      "hardwarePath": "sys/0000:65:00.0",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "freq1_input": "1065000000",
+        "freq1_label": "sclk",
+        "in0_input": "0",
+        "in0_label": "vddgfx",
+        "in1_input": "0",
+        "in1_label": "vddnb",
+        "power1_average": "37033000",
+        "power1_input": "37033000",
+        "power1_label": "PPT",
+        "temp1_input": "41000",
+        "temp1_label": "edge"
+      }
+    },
+    {
+      "className": "hwmon3",
+      "driverName": "k10temp",
+      "deviceLabel": null,
+      "hardwarePath": "sys/0000:00:18.3",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "80125",
+        "temp1_label": "Tctl"
+      }
+    },
+    {
+      "className": "hwmon4",
+      "driverName": "iwlwifi_1_1",
+      "deviceLabel": null,
+      "hardwarePath": "sys/class/thermal_zone1",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "38000"
+      }
+    },
+    {
+      "className": "hwmon5",
+      "driverName": "hidpp_battery_0",
+      "deviceLabel": null,
+      "hardwarePath": "sys/class/hidpp_battery_0",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {}
+    }
+  ]
+}

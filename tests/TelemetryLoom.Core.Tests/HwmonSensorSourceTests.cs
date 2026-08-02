@@ -58,6 +58,25 @@ public sealed class HwmonSensorSourceTests
         Assert.NotEqual(original.DisplayName, renamed.DisplayName);
     }
 
+    [Fact]
+    public void ParsesRealCachyOsAmdFixture()
+    {
+        var sensors = LoadSource("cachyos-amd.json").GetSensors();
+
+        Assert.Equal(12, sensors.Count);
+        AssertDeviceReading(sensors, "acpitz_0", "temp", "input", 1, 20d, UnitCode.Celsius);
+        AssertDeviceReading(sensors, "nvme", "temp", "input", 1, 42.85d, UnitCode.Celsius);
+        AssertDeviceReading(sensors, "nvme", "temp", "input", 3, 35.85d, UnitCode.Celsius);
+        AssertDeviceReading(sensors, "amdgpu", "freq", "input", 1, 1_065_000_000d, UnitCode.Hertz);
+        AssertDeviceReading(sensors, "amdgpu", "power", "average", 1, 37.033d, UnitCode.Watts);
+        AssertDeviceReading(sensors, "amdgpu", "temp", "input", 1, 41d, UnitCode.Celsius);
+        AssertDeviceReading(sensors, "k10temp", "temp", "input", 1, 80.125d, UnitCode.Celsius);
+        AssertDeviceReading(sensors, "iwlwifi_1_1", "temp", "input", 1, 38d, UnitCode.Celsius);
+
+        Assert.All(sensors, sensor => Assert.Equal(HwmonIdentityQuality.StableHardwarePath.ToString(), sensor.Metadata["identityQuality"]));
+        Assert.DoesNotContain(sensors, sensor => sensor.Metadata["driver"] == "hidpp_battery_0");
+    }
+
     private static HwmonSensorSource LoadSource(string name) =>
         new(FixtureHwmonSnapshotSource.FromFile(FixturePath(name)));
 
@@ -83,6 +102,26 @@ public sealed class HwmonSensorSourceTests
 
         Assert.Equal(expectedValue, sensor.Value);
         Assert.Equal(expectedQuantity, sensor.Quantity);
+        Assert.Equal(expectedUnit, sensor.Unit);
+        Assert.Equal(SensorStatus.Available, sensor.Status);
+    }
+
+    private static void AssertDeviceReading(
+        IReadOnlyList<SensorReading> sensors,
+        string driver,
+        string sensorType,
+        string measurement,
+        int channel,
+        double expectedValue,
+        UnitCode expectedUnit)
+    {
+        var sensor = sensors.Single(reading =>
+            reading.Metadata["driver"] == driver &&
+            reading.Metadata["sensorType"] == sensorType &&
+            reading.Metadata["measurement"] == measurement &&
+            reading.Metadata["channel"] == channel.ToString());
+
+        Assert.Equal(expectedValue, sensor.Value);
         Assert.Equal(expectedUnit, sensor.Unit);
         Assert.Equal(SensorStatus.Available, sensor.Status);
     }

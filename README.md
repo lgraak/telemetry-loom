@@ -79,7 +79,7 @@ The command reads only standard hwmon identity, input, average, label, and fault
 ## Planned milestones
 
 1. Repository foundation and simulated sensor (complete)
-2. hwmon discovery and stable sensor identity (implemented; awaiting real-hardware fixture validation)
+2. hwmon discovery and stable sensor identity (complete; validated on CachyOS with AMD CPU/GPU, NVMe, ACPI, and Intel Wi-Fi sensors)
 3. aliases and JSON configuration persistence
 4. unit-aware arithmetic formulas
 5. live API updates
