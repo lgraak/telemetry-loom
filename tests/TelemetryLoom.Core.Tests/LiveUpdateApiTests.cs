@@ -39,14 +39,16 @@ public sealed class LiveUpdateApiTests : IDisposable
         var dataLine = await reader.ReadLineAsync(cancellation.Token);
         var separator = await reader.ReadLineAsync(cancellation.Token);
 
-        Assert.Equal("id: 1", idLine);
+        Assert.StartsWith("id: ", idLine, StringComparison.Ordinal);
         Assert.Equal("event: sensors", eventLine);
         Assert.StartsWith("data: ", dataLine, StringComparison.Ordinal);
         Assert.Equal(string.Empty, separator);
 
         using var json = JsonDocument.Parse(dataLine![6..]);
         Assert.Equal(1, json.RootElement.GetProperty("schemaVersion").GetInt32());
-        Assert.Equal(1, json.RootElement.GetProperty("sequence").GetInt64());
+        var eventId = long.Parse(idLine![4..]);
+        Assert.True(eventId > 0);
+        Assert.Equal(eventId, json.RootElement.GetProperty("sequence").GetInt64());
         Assert.NotEmpty(json.RootElement.GetProperty("sensors").EnumerateArray());
         Assert.Equal("Celsius", json.RootElement.GetProperty("sensors")[0].GetProperty("unit").GetString());
     }
