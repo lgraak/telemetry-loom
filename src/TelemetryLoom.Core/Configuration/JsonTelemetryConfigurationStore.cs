@@ -1,10 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using TelemetryLoom.Contracts.Aliases;
 
-namespace TelemetryLoom.Core.Aliases;
+namespace TelemetryLoom.Core.Configuration;
 
-public sealed class JsonAliasConfigurationStore(string path) : IAliasConfigurationStore
+public sealed class JsonTelemetryConfigurationStore(string path) : ITelemetryConfigurationStore
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -17,16 +16,16 @@ public sealed class JsonAliasConfigurationStore(string path) : IAliasConfigurati
     public string Path { get; } = System.IO.Path.GetFullPath(path);
     public string PreviousPath => $"{Path}.previous";
 
-    public IReadOnlyList<SensorAliasDefinition> Load()
+    public TelemetryConfigurationDocument Load()
     {
         if (!File.Exists(Path))
         {
-            return [];
+            return new TelemetryConfigurationDocument();
         }
 
         try
         {
-            return DeserializeDocument(File.ReadAllBytes(Path), Path).Aliases;
+            return DeserializeDocument(File.ReadAllBytes(Path), Path);
         }
         catch (Exception exception) when (exception is JsonException or InvalidDataException)
         {
@@ -34,12 +33,12 @@ public sealed class JsonAliasConfigurationStore(string path) : IAliasConfigurati
                 ? $" A previous configuration exists at '{PreviousPath}' and can be restored deliberately."
                 : string.Empty;
             throw new InvalidDataException(
-                $"Alias configuration is invalid: {Path}. {exception.Message}{recovery}",
+                $"Telemetry configuration is invalid: {Path}. {exception.Message}{recovery}",
                 exception);
         }
     }
 
-    public void Save(IReadOnlyCollection<SensorAliasDefinition> aliases)
+    public void Save(TelemetryConfigurationDocument document)
     {
         var directory = System.IO.Path.GetDirectoryName(Path)
             ?? throw new InvalidOperationException($"Configuration path has no parent directory: {Path}");
@@ -51,12 +50,14 @@ public sealed class JsonAliasConfigurationStore(string path) : IAliasConfigurati
 
         try
         {
-            var document = new AliasConfigurationDocument
+            var normalized = document with
             {
-                Aliases = [.. aliases.OrderBy(alias => alias.Key, StringComparer.Ordinal)]
+                SchemaVersion = TelemetryConfigurationDocument.CurrentSchemaVersion,
+                Aliases = [.. document.Aliases.OrderBy(alias => alias.Key, StringComparer.Ordinal)],
+                CalculatedSensors = [.. document.CalculatedSensors.OrderBy(sensor => sensor.Key, StringComparer.Ordinal)]
             };
-            var bytes = JsonSerializer.SerializeToUtf8Bytes(document, SerializerOptions);
-            _ = DeserializeDocument(bytes, "serialized alias configuration");
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(normalized, SerializerOptions);
+            _ = DeserializeDocument(bytes, "serialized telemetry configuration");
 
             using (var stream = new FileStream(
                        temporaryPath,
@@ -90,21 +91,21 @@ public sealed class JsonAliasConfigurationStore(string path) : IAliasConfigurati
         }
     }
 
-    private static AliasConfigurationDocument DeserializeDocument(ReadOnlySpan<byte> bytes, string source)
+    private static TelemetryConfigurationDocument DeserializeDocument(ReadOnlySpan<byte> bytes, string source)
     {
-        var document = JsonSerializer.Deserialize<AliasConfigurationDocument>(bytes, SerializerOptions)
-            ?? throw new InvalidDataException($"Alias configuration is empty: {source}");
+        var document = JsonSerializer.Deserialize<TelemetryConfigurationDocument>(bytes, SerializerOptions)
+            ?? throw new InvalidDataException($"Telemetry configuration is empty: {source}");
 
-        if (document.SchemaVersion != AliasConfigurationDocument.CurrentSchemaVersion)
+        if (document.SchemaVersion != TelemetryConfigurationDocument.CurrentSchemaVersion)
         {
             throw new InvalidDataException(
-                $"Unsupported alias configuration schema {document.SchemaVersion}; " +
-                $"expected {AliasConfigurationDocument.CurrentSchemaVersion}.");
+                $"Unsupported telemetry configuration schema {document.SchemaVersion}; " +
+                $"expected {TelemetryConfigurationDocument.CurrentSchemaVersion}.");
         }
 
-        if (document.Aliases is null)
+        if (document.Aliases is null || document.CalculatedSensors is null)
         {
-            throw new InvalidDataException($"Alias configuration has a null aliases collection: {source}");
+            throw new InvalidDataException($"Telemetry configuration has a null collection: {source}");
         }
 
         return document;

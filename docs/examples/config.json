@@ -9,5 +9,14 @@
       "unit": "Celsius",
       "source": "hwmon"
     }
+  ],
+  "calculatedSensors": [
+    {
+      "key": "cooling.air.delta",
+      "displayName": "Radiator Air Delta",
+      "formula": "cooling.air.exhaust - cooling.air.intake",
+      "quantity": "TemperatureDelta",
+      "unit": "DeltaCelsius"
+    }
   ]
 }

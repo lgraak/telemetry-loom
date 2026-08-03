@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using TelemetryLoom.Contracts.Aliases;
 using TelemetryLoom.Contracts.Sensors;
 using TelemetryLoom.Contracts.Units;
+using TelemetryLoom.Core.Configuration;
 using TelemetryLoom.Core.Sensors;
 
 namespace TelemetryLoom.Core.Aliases;
@@ -10,17 +11,17 @@ public sealed partial class SensorAliasRegistry
 {
     private readonly object _gate = new();
     private readonly SensorCatalog _sensorCatalog;
-    private readonly IAliasConfigurationStore _store;
+    private readonly TelemetryConfigurationRegistry _configuration;
     private IReadOnlyList<SensorAliasDefinition> _aliases;
 
-    public SensorAliasRegistry(SensorCatalog sensorCatalog, IAliasConfigurationStore store)
+    public SensorAliasRegistry(SensorCatalog sensorCatalog, TelemetryConfigurationRegistry configuration)
     {
         _sensorCatalog = sensorCatalog;
-        _store = store;
-        _aliases = ValidateLoadedAliases(store.Load());
+        _configuration = configuration;
+        _aliases = ValidateLoadedAliases(configuration.GetSnapshot().Aliases);
     }
 
-    [GeneratedRegex(@"^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$")]
+    [GeneratedRegex(@"^[a-z][a-z0-9]*(?:[._][a-z0-9]+)*$")]
     private static partial Regex AliasKeyRegex();
 
     public IReadOnlyList<SensorAliasDefinition> GetDefinitions()
@@ -70,6 +71,12 @@ public sealed partial class SensorAliasRegistry
 
         lock (_gate)
         {
+            if (_configuration.GetSnapshot().CalculatedSensors.Any(calculated =>
+                    string.Equals(calculated.Key, key, StringComparison.Ordinal)))
+            {
+                throw new AliasConflictException($"A calculated sensor already uses key: {key}");
+            }
+
             var existing = _aliases.FirstOrDefault(alias =>
                 string.Equals(alias.Key, key, StringComparison.Ordinal));
             if (sensor is null &&
@@ -100,7 +107,7 @@ public sealed partial class SensorAliasRegistry
                 .OrderBy(alias => alias.Key, StringComparer.Ordinal)
                 .ToArray();
 
-            _store.Save(next);
+            _configuration.UpdateAliases(next);
             _aliases = next;
             return ToResolved(definition, sensor?.Status ?? SensorStatus.Unavailable);
         }
@@ -118,7 +125,7 @@ public sealed partial class SensorAliasRegistry
                 return false;
             }
 
-            _store.Save(next);
+            _configuration.UpdateAliases(next);
             _aliases = next;
             return true;
         }
@@ -163,7 +170,7 @@ public sealed partial class SensorAliasRegistry
         if (string.IsNullOrWhiteSpace(key) || key.Length > 128 || !AliasKeyRegex().IsMatch(key))
         {
             throw new AliasValidationException(
-                "Alias key must be 1-128 lowercase characters, start with a letter, and use alphanumeric segments separated by '.', '_', or '-'.");
+                "Alias key must be 1-128 lowercase characters, start with a letter, and use alphanumeric segments separated by '.' or '_'.");
         }
     }
 

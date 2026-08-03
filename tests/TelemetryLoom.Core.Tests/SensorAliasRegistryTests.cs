@@ -1,5 +1,6 @@
 using TelemetryLoom.Contracts.Sensors;
 using TelemetryLoom.Core.Aliases;
+using TelemetryLoom.Core.Configuration;
 using TelemetryLoom.Core.Sensors;
 
 namespace TelemetryLoom.Core.Tests;
@@ -16,10 +17,10 @@ public sealed class SensorAliasRegistryTests
 
         try
         {
-            var registry = new SensorAliasRegistry(sensors, new JsonAliasConfigurationStore(path));
+            var registry = CreateRegistry(sensors, new JsonTelemetryConfigurationStore(path));
             registry.Upsert("cooling.air.intake", "Radiator Intake Air", "fixture:temperature:1");
 
-            var reloaded = new SensorAliasRegistry(sensors, new JsonAliasConfigurationStore(path));
+            var reloaded = CreateRegistry(sensors, new JsonTelemetryConfigurationStore(path));
             var reading = Assert.Single(new AliasedSensorCatalog(sensors, reloaded).GetSensors());
 
             Assert.Equal("cooling.air.intake", reading.Alias);
@@ -38,7 +39,7 @@ public sealed class SensorAliasRegistryTests
     {
         var source = new MutableSensorSource(CreateReading());
         var sensors = new SensorCatalog([source]);
-        var registry = new SensorAliasRegistry(sensors, new MemoryAliasStore());
+        var registry = CreateRegistry(sensors, new MemoryConfigurationStore());
         registry.Upsert("cooling.air.intake", "Radiator Intake Air", "fixture:temperature:1");
         source.Clear();
 
@@ -57,7 +58,7 @@ public sealed class SensorAliasRegistryTests
     {
         var source = new MutableSensorSource(CreateReading());
         var sensors = new SensorCatalog([source]);
-        var registry = new SensorAliasRegistry(sensors, new MemoryAliasStore());
+        var registry = CreateRegistry(sensors, new MemoryConfigurationStore());
         registry.Upsert("cooling.air.intake", "Radiator Intake Air", "fixture:temperature:1");
         source.Clear();
 
@@ -75,10 +76,12 @@ public sealed class SensorAliasRegistryTests
     public void RejectsInvalidKeysUnknownSensorsAndDuplicateBindings()
     {
         var sensors = new SensorCatalog([new MutableSensorSource(CreateReading())]);
-        var registry = new SensorAliasRegistry(sensors, new MemoryAliasStore());
+        var registry = CreateRegistry(sensors, new MemoryConfigurationStore());
 
         Assert.Throws<AliasValidationException>(() =>
             registry.Upsert("Cooling Intake", "Intake", "fixture:temperature:1"));
+        Assert.Throws<AliasValidationException>(() =>
+            registry.Upsert("cooling-air", "Intake", "fixture:temperature:1"));
         Assert.Throws<AliasSensorNotFoundException>(() =>
             registry.Upsert("cooling.air.missing", "Missing", "fixture:missing"));
 
@@ -93,20 +96,20 @@ public sealed class SensorAliasRegistryTests
     {
         var source = new MutableSensorSource(CreateReading());
         var sensors = new SensorCatalog([source]);
-        var store = new MemoryAliasStore();
-        var registry = new SensorAliasRegistry(sensors, store);
+        var store = new MemoryConfigurationStore();
+        var registry = CreateRegistry(sensors, store);
         registry.Upsert("cooling.air.intake", "Intake", "fixture:temperature:1");
 
         Assert.True(registry.Delete("cooling.air.intake"));
         Assert.False(registry.Delete("cooling.air.intake"));
-        Assert.Empty(store.Load());
+        Assert.Empty(store.Load().Aliases);
     }
 
     [Fact]
     public void FailedPersistenceDoesNotChangeInMemoryAliases()
     {
         var sensors = new SensorCatalog([new MutableSensorSource(CreateReading())]);
-        var registry = new SensorAliasRegistry(sensors, new FailingAliasStore());
+        var registry = CreateRegistry(sensors, new FailingConfigurationStore());
 
         Assert.Throws<IOException>(() =>
             registry.Upsert("cooling.air.intake", "Intake", "fixture:temperature:1"));
@@ -120,8 +123,8 @@ public sealed class SensorAliasRegistryTests
         var path = Path.Combine(root, "config.json");
         var source = new MutableSensorSource(CreateReading());
         var sensors = new SensorCatalog([source]);
-        var store = new JsonAliasConfigurationStore(path);
-        var registry = new SensorAliasRegistry(sensors, store);
+        var store = new JsonTelemetryConfigurationStore(path);
+        var registry = CreateRegistry(sensors, store);
 
         try
         {
@@ -132,7 +135,7 @@ public sealed class SensorAliasRegistryTests
                 registry.Upsert("cooling.air.intake", "Changed Name", "fixture:temperature:1"));
 
             Assert.Equal("Original Name", Assert.Single(registry.GetDefinitions()).DisplayName);
-            Assert.Equal("Original Name", Assert.Single(store.Load()).DisplayName);
+            Assert.Equal("Original Name", Assert.Single(store.Load().Aliases).DisplayName);
             Assert.Empty(Directory.EnumerateFiles(root, "*.tmp"));
         }
         finally
@@ -173,21 +176,23 @@ public sealed class SensorAliasRegistryTests
         public void Clear() => _sensors.Clear();
     }
 
-    private sealed class MemoryAliasStore : IAliasConfigurationStore
+    private static SensorAliasRegistry CreateRegistry(SensorCatalog sensors, ITelemetryConfigurationStore store) =>
+        new(sensors, new TelemetryConfigurationRegistry(store));
+
+    private sealed class MemoryConfigurationStore : ITelemetryConfigurationStore
     {
-        private IReadOnlyList<TelemetryLoom.Contracts.Aliases.SensorAliasDefinition> _aliases = [];
+        private TelemetryConfigurationDocument _document = new();
 
-        public IReadOnlyList<TelemetryLoom.Contracts.Aliases.SensorAliasDefinition> Load() => [.. _aliases];
+        public TelemetryConfigurationDocument Load() => _document;
 
-        public void Save(IReadOnlyCollection<TelemetryLoom.Contracts.Aliases.SensorAliasDefinition> aliases) =>
-            _aliases = [.. aliases];
+        public void Save(TelemetryConfigurationDocument document) => _document = document;
     }
 
-    private sealed class FailingAliasStore : IAliasConfigurationStore
+    private sealed class FailingConfigurationStore : ITelemetryConfigurationStore
     {
-        public IReadOnlyList<TelemetryLoom.Contracts.Aliases.SensorAliasDefinition> Load() => [];
+        public TelemetryConfigurationDocument Load() => new();
 
-        public void Save(IReadOnlyCollection<TelemetryLoom.Contracts.Aliases.SensorAliasDefinition> aliases) =>
+        public void Save(TelemetryConfigurationDocument document) =>
             throw new IOException("Simulated persistence failure.");
     }
 }

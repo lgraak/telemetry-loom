@@ -20,6 +20,14 @@ Alias records persist the stable unit code and quantity needed to represent miss
 
 Successful replacement retains the prior active file as `config.json.previous`. Recovery is deliberate: malformed active configuration fails startup and identifies the previous file rather than loading it silently.
 
+Physical aliases and calculated sensors share one configuration document and one key namespace. A central configuration registry serializes updates so writing either collection preserves the other. Keys use dots or underscores as separators; hyphens are excluded because `-` is formula subtraction syntax.
+
+## Formula implementation
+
+The first formula slice uses a tokenizer, recursive-descent parser, typed AST, and explicit dimensional inference. It does not use string substitution or a general-purpose scripting engine. Calculated definitions may depend on other calculated sensors, but dependency cycles are rejected.
+
+No implicit unit conversion occurs. Dependency rebinding that changes a configured result type produces `CalculationError` until the definition is updated, preventing numeric values from being emitted with stale unit metadata.
+
 ## HTTP API stability
 
 The localhost HTTP API is pre-release and may change until the first external consumer, the InfoPanel plugin, is implemented. `/api/v1` is intentionally deferred while the contract is still being shaped.
