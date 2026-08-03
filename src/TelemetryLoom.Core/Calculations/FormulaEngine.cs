@@ -62,31 +62,31 @@ public static class FormulaEngine
     public static FormulaType Infer(
         FormulaExpression expression,
         Func<string, FormulaType?> resolveAlias) => expression switch
-    {
-        ScalarExpression => ScalarType,
-        AliasExpression alias => resolveAlias(alias.Key)
-            ?? throw new FormulaException($"Unknown sensor alias '{alias.Key}'"),
-        UnaryExpression unary => Infer(unary.Operand, resolveAlias),
-        BinaryExpression binary => CombineTypes(
-            binary.Operator,
-            Infer(binary.Left, resolveAlias),
-            Infer(binary.Right, resolveAlias)),
-        _ => throw new FormulaException("Unsupported expression")
-    };
+        {
+            ScalarExpression => ScalarType,
+            AliasExpression alias => resolveAlias(alias.Key)
+                ?? throw new FormulaException($"Unknown sensor alias '{alias.Key}'"),
+            UnaryExpression unary => Infer(unary.Operand, resolveAlias),
+            BinaryExpression binary => CombineTypes(
+                binary.Operator,
+                Infer(binary.Left, resolveAlias),
+                Infer(binary.Right, resolveAlias)),
+            _ => throw new FormulaException("Unsupported expression")
+        };
 
     public static FormulaValue Evaluate(
         FormulaExpression expression,
         Func<string, FormulaValue> resolveAlias) => expression switch
-    {
-        ScalarExpression scalar => new(scalar.Value, ScalarType),
-        AliasExpression alias => resolveAlias(alias.Key),
-        UnaryExpression unary => Negate(Evaluate(unary.Operand, resolveAlias)),
-        BinaryExpression binary => Calculate(
-            binary.Operator,
-            Evaluate(binary.Left, resolveAlias),
-            Evaluate(binary.Right, resolveAlias)),
-        _ => throw new FormulaException("Unsupported expression")
-    };
+        {
+            ScalarExpression scalar => new(scalar.Value, ScalarType),
+            AliasExpression alias => resolveAlias(alias.Key),
+            UnaryExpression unary => Negate(Evaluate(unary.Operand, resolveAlias)),
+            BinaryExpression binary => Calculate(
+                binary.Operator,
+                Evaluate(binary.Left, resolveAlias),
+                Evaluate(binary.Right, resolveAlias)),
+            _ => throw new FormulaException("Unsupported expression")
+        };
 
     private static FormulaValue Negate(FormulaValue value) => new(-value.Value, value.Type);
 
@@ -295,8 +295,12 @@ public static class FormulaEngine
             var character = text[_offset++];
             var punctuation = character switch
             {
-                '+' => TokenKind.Plus, '-' => TokenKind.Minus, '*' => TokenKind.Star,
-                '/' => TokenKind.Slash, '(' => TokenKind.LeftParenthesis, ')' => TokenKind.RightParenthesis,
+                '+' => TokenKind.Plus,
+                '-' => TokenKind.Minus,
+                '*' => TokenKind.Star,
+                '/' => TokenKind.Slash,
+                '(' => TokenKind.LeftParenthesis,
+                ')' => TokenKind.RightParenthesis,
                 _ => (TokenKind?)null
             };
             if (punctuation is not null) return new Token(punctuation.Value, character.ToString(), start);

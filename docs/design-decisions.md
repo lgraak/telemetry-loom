@@ -33,3 +33,9 @@ No implicit unit conversion occurs. Dependency rebinding that changes a configur
 The localhost HTTP API is pre-release and may change until the first external consumer, the InfoPanel plugin, is implemented. `/api/v1` is intentionally deferred while the contract is still being shaped.
 
 Once InfoPanel consumes the API, breaking changes must be deliberate and exposed through a versioned contract.
+
+## Live update transport
+
+Live updates use Server-Sent Events at `/api/sensors/stream`. Telemetry flow is one-way, so WebSockets would add protocol and session complexity without a current requirement.
+
+Each event contains a versioned complete sensor snapshot. Event IDs are monotonic within one process but are not durable. Reconnect sends a fresh snapshot immediately; history and `Last-Event-ID` replay are deferred. The sampling interval is service-wide and bounded from 100 milliseconds to 60 seconds.

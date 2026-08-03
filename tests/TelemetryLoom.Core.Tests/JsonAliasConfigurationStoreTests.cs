@@ -17,10 +17,13 @@ public sealed class JsonTelemetryConfigurationStoreTests
         try
         {
             var store = new JsonTelemetryConfigurationStore(path);
-            store.Save(new TelemetryConfigurationDocument { Aliases = [
+            store.Save(new TelemetryConfigurationDocument
+            {
+                Aliases = [
                 CreateAlias("z.last", "sensor:z"),
                 CreateAlias("a.first", "sensor:a")
-            ] });
+            ]
+            });
 
             var loaded = store.Load();
             using var json = JsonDocument.Parse(File.ReadAllText(path));

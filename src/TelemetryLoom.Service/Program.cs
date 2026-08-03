@@ -4,6 +4,7 @@ using TelemetryLoom.Core.Aliases;
 using TelemetryLoom.Core.Configuration;
 using TelemetryLoom.Core.Calculations;
 using TelemetryLoom.Core.Sensors;
+using TelemetryLoom.Service.LiveUpdates;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,18 @@ builder.Services.AddSingleton<AliasedSensorCatalog>();
 builder.Services.AddSingleton<CalculatedSensorRegistry>();
 builder.Services.AddSingleton<CalculatedSensorCatalog>();
 builder.Services.AddSingleton<TelemetrySensorCatalog>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddOptions<LiveUpdateOptions>()
+    .Bind(builder.Configuration.GetSection("TelemetryLoom:LiveUpdates"))
+    .Validate(
+        options => options.IntervalMilliseconds is >= LiveUpdateOptions.MinimumIntervalMilliseconds
+            and <= LiveUpdateOptions.MaximumIntervalMilliseconds,
+        $"IntervalMilliseconds must be between {LiveUpdateOptions.MinimumIntervalMilliseconds} " +
+        $"and {LiveUpdateOptions.MaximumIntervalMilliseconds}.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<SensorSnapshotPublisher>();
+builder.Services.AddHostedService(services =>
+    services.GetRequiredService<SensorSnapshotPublisher>());
 
 var app = builder.Build();
 _ = app.Services.GetRequiredService<SensorAliasRegistry>();
@@ -46,6 +59,7 @@ _ = app.Services.GetRequiredService<CalculatedSensorRegistry>();
 
 app.MapRazorPages();
 app.MapGet("/api/sensors", (TelemetrySensorCatalog catalog) => catalog.GetSensors());
+app.MapGet("/api/sensors/stream", SensorStreamEndpoint.Stream);
 app.MapGet("/api/sensors/by-alias/{key}", (string key, TelemetrySensorCatalog catalog) =>
     catalog.GetSensorByAlias(key) is { } sensor ? Results.Ok(sensor) : Results.NotFound());
 app.MapGet("/api/sensors/{id}", (string id, TelemetrySensorCatalog catalog) =>
