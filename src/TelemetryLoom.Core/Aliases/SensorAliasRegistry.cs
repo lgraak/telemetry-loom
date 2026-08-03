@@ -28,12 +28,6 @@ public sealed partial class SensorAliasRegistry
     {
         lock (_gate)
         {
-            if (_configuration.GetSnapshot().CalculatedSensors.Any(sensor =>
-                    string.Equals(sensor.Key, key, StringComparison.Ordinal)))
-            {
-                throw new AliasConflictException($"A calculated sensor already uses key: {key}");
-            }
-
             return [.. _aliases];
         }
     }
@@ -77,6 +71,12 @@ public sealed partial class SensorAliasRegistry
 
         lock (_gate)
         {
+            if (_configuration.GetSnapshot().CalculatedSensors.Any(calculated =>
+                    string.Equals(calculated.Key, key, StringComparison.Ordinal)))
+            {
+                throw new AliasConflictException($"A calculated sensor already uses key: {key}");
+            }
+
             var existing = _aliases.FirstOrDefault(alias =>
                 string.Equals(alias.Key, key, StringComparison.Ordinal));
             if (sensor is null &&
