@@ -133,11 +133,11 @@ public sealed class AliasApiTests : IDisposable
             new { displayName = "Scaled Temperature", formula = "temperature.input * 2" });
         Assert.Equal(HttpStatusCode.OK, scaled.StatusCode);
 
-        var result = await client.GetFromJsonAsync<SensorReading>("/api/sensors/by-alias/temperature.scaled");
-        Assert.NotNull(result);
-        Assert.Equal(72, result.Value);
-        Assert.Equal(UnitCode.Celsius, result.Unit);
-        Assert.Equal("calculated:temperature.scaled", result.Id);
+        using var result = JsonDocument.Parse(
+            await client.GetStringAsync("/api/sensors/by-alias/temperature.scaled"));
+        Assert.Equal(72, result.RootElement.GetProperty("value").GetDouble());
+        Assert.Equal("Celsius", result.RootElement.GetProperty("unit").GetString());
+        Assert.Equal("calculated:temperature.scaled", result.RootElement.GetProperty("id").GetString());
 
         Assert.Equal(HttpStatusCode.NoContent,
             (await client.DeleteAsync("/api/calculations/temperature.scaled")).StatusCode);

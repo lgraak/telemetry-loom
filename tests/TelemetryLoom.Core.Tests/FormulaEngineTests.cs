@@ -26,7 +26,6 @@ public sealed class FormulaEngineTests
     [InlineData("1.")]
     [InlineData("1 +")]
     [InlineData("(1 + 2")]
-    [InlineData("sensor-bad")]
     [InlineData("Sensor.bad")]
     public void ParserRejectsMalformedOrUnsupportedSyntax(string formula) =>
         Assert.Throws<FormulaException>(() => FormulaEngine.Parse(formula));

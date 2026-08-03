@@ -38,8 +38,8 @@ public sealed class CalculatedSensorCatalogTests
     {
         var dependencies = new[]
         {
-            Reading("fixture:first", first == SensorStatus.Available ? 10 : null, first, "2026-08-02T00:00:00Z"),
-            Reading("fixture:second", second == SensorStatus.Available ? 5 : null, second, "2026-08-02T00:00:00Z")
+            Reading("fixture:first", first is SensorStatus.Available or SensorStatus.Stale ? 10 : null, first, "2026-08-02T00:00:00Z"),
+            Reading("fixture:second", second is SensorStatus.Available or SensorStatus.Stale ? 5 : null, second, "2026-08-02T00:00:00Z")
         };
         var fixture = CreateFixture(dependencies);
         fixture.Aliases.Upsert("value.first", "First", "fixture:first");
