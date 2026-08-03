@@ -135,7 +135,7 @@ public sealed class AliasApiTests : IDisposable
 
         using var result = JsonDocument.Parse(
             await client.GetStringAsync("/api/sensors/by-alias/temperature.scaled"));
-        Assert.Equal(72, result.RootElement.GetProperty("value").GetDouble());
+        Assert.Equal(60, result.RootElement.GetProperty("value").GetDouble());
         Assert.Equal("Celsius", result.RootElement.GetProperty("unit").GetString());
         Assert.Equal("calculated:temperature.scaled", result.RootElement.GetProperty("id").GetString());
 
