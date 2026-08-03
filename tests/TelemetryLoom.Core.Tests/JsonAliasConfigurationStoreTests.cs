@@ -2,10 +2,11 @@ using System.Text.Json;
 using TelemetryLoom.Contracts.Aliases;
 using TelemetryLoom.Contracts.Sensors;
 using TelemetryLoom.Core.Aliases;
+using TelemetryLoom.Core.Configuration;
 
 namespace TelemetryLoom.Core.Tests;
 
-public sealed class JsonAliasConfigurationStoreTests
+public sealed class JsonTelemetryConfigurationStoreTests
 {
     [Fact]
     public void FirstSaveCreatesActiveWithoutPreviousAndCleansTemporaryFile()
@@ -15,17 +16,17 @@ public sealed class JsonAliasConfigurationStoreTests
 
         try
         {
-            var store = new JsonAliasConfigurationStore(path);
-            store.Save([
+            var store = new JsonTelemetryConfigurationStore(path);
+            store.Save(new TelemetryConfigurationDocument { Aliases = [
                 CreateAlias("z.last", "sensor:z"),
                 CreateAlias("a.first", "sensor:a")
-            ]);
+            ] });
 
             var loaded = store.Load();
             using var json = JsonDocument.Parse(File.ReadAllText(path));
 
-            Assert.Equal(AliasConfigurationDocument.CurrentSchemaVersion, json.RootElement.GetProperty("schemaVersion").GetInt32());
-            Assert.Equal(["a.first", "z.last"], loaded.Select(alias => alias.Key));
+            Assert.Equal(TelemetryConfigurationDocument.CurrentSchemaVersion, json.RootElement.GetProperty("schemaVersion").GetInt32());
+            Assert.Equal(["a.first", "z.last"], loaded.Aliases.Select(alias => alias.Key));
             Assert.False(File.Exists(store.PreviousPath));
             Assert.Empty(Directory.EnumerateFiles(Path.GetDirectoryName(path)!, "*.tmp"));
         }
@@ -43,17 +44,17 @@ public sealed class JsonAliasConfigurationStoreTests
 
         try
         {
-            var store = new JsonAliasConfigurationStore(path);
-            store.Save([CreateAlias("first.alias", "sensor:first")]);
-            store.Save([CreateAlias("second.alias", "sensor:second")]);
+            var store = new JsonTelemetryConfigurationStore(path);
+            store.Save(new TelemetryConfigurationDocument { Aliases = [CreateAlias("first.alias", "sensor:first")] });
+            store.Save(new TelemetryConfigurationDocument { Aliases = [CreateAlias("second.alias", "sensor:second")] });
 
-            Assert.Equal("second.alias", Assert.Single(store.Load()).Key);
-            Assert.Equal("first.alias", Assert.Single(new JsonAliasConfigurationStore(store.PreviousPath).Load()).Key);
+            Assert.Equal("second.alias", Assert.Single(store.Load().Aliases).Key);
+            Assert.Equal("first.alias", Assert.Single(new JsonTelemetryConfigurationStore(store.PreviousPath).Load().Aliases).Key);
 
-            store.Save([CreateAlias("third.alias", "sensor:third")]);
+            store.Save(new TelemetryConfigurationDocument { Aliases = [CreateAlias("third.alias", "sensor:third")] });
 
-            Assert.Equal("third.alias", Assert.Single(store.Load()).Key);
-            Assert.Equal("second.alias", Assert.Single(new JsonAliasConfigurationStore(store.PreviousPath).Load()).Key);
+            Assert.Equal("third.alias", Assert.Single(store.Load().Aliases).Key);
+            Assert.Equal("second.alias", Assert.Single(new JsonTelemetryConfigurationStore(store.PreviousPath).Load().Aliases).Key);
             Assert.Empty(Directory.EnumerateFiles(root, "*.tmp"));
         }
         finally
@@ -70,16 +71,16 @@ public sealed class JsonAliasConfigurationStoreTests
 
         try
         {
-            var store = new JsonAliasConfigurationStore(path);
-            store.Save([CreateAlias("first.alias", "sensor:first")]);
-            store.Save([CreateAlias("second.alias", "sensor:second")]);
+            var store = new JsonTelemetryConfigurationStore(path);
+            store.Save(new TelemetryConfigurationDocument { Aliases = [CreateAlias("first.alias", "sensor:first")] });
+            store.Save(new TelemetryConfigurationDocument { Aliases = [CreateAlias("second.alias", "sensor:second")] });
             File.WriteAllText(path, "{ malformed");
 
             var exception = Assert.Throws<InvalidDataException>(() => store.Load());
 
             Assert.Contains(store.PreviousPath, exception.Message, StringComparison.Ordinal);
             Assert.Contains("restored deliberately", exception.Message, StringComparison.Ordinal);
-            Assert.Equal("first.alias", Assert.Single(new JsonAliasConfigurationStore(store.PreviousPath).Load()).Key);
+            Assert.Equal("first.alias", Assert.Single(new JsonTelemetryConfigurationStore(store.PreviousPath).Load().Aliases).Key);
         }
         finally
         {
@@ -97,9 +98,9 @@ public sealed class JsonAliasConfigurationStoreTests
         {
             File.WriteAllText(path, """{"schemaVersion":99,"aliases":[]}""");
 
-            var exception = Assert.Throws<InvalidDataException>(() => new JsonAliasConfigurationStore(path).Load());
+            var exception = Assert.Throws<InvalidDataException>(() => new JsonTelemetryConfigurationStore(path).Load());
 
-            Assert.Contains("Unsupported alias configuration schema 99", exception.Message, StringComparison.Ordinal);
+            Assert.Contains("Unsupported telemetry configuration schema 99", exception.Message, StringComparison.Ordinal);
         }
         finally
         {

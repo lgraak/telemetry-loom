@@ -10,7 +10,7 @@ cooling.air.exhaust
 cpu.package.temperature
 ```
 
-Keys must start with a letter and contain no more than 128 lowercase letters, digits, `.`, `_`, or `-`. Separators must occur between alphanumeric segments. Each key is unique and each sensor can have at most one configured alias.
+Keys must start with a letter and contain no more than 128 lowercase letters, digits, `.`, or `_`. Separators must occur between alphanumeric segments. Hyphens are excluded because `-` is the formula subtraction operator. Each key is unique across physical aliases and calculated sensors, and each physical sensor can have at most one configured alias.
 
 The one-alias-per-sensor rule is deliberate for the initial product. It keeps reverse lookup, sensor decoration, the configuration interface, and diagnostics unambiguous. Rename a display name without changing its alias key. Multiple compatibility aliases remain deferred until a concrete consumer requires them.
 
@@ -62,6 +62,6 @@ The persisted record snapshots quantity, stable unit code, and source metadata. 
 
 The service does not silently load `config.json.previous` when the active configuration is malformed. Startup fails with an error that identifies the previous file. Recovery is deliberate: stop the service, inspect both files, replace `config.json` with the chosen valid version, and restart.
 
-Prefer the API for edits while the service is running. The file is loaded when the alias registry starts; direct file edits require a service restart.
+Prefer the API for edits while the service is running. The file is loaded when the configuration registries start; direct file edits require a service restart.
 
 See [examples/config.json](examples/config.json) for the canonical pre-release configuration shape. A formal JSON Schema is deferred while the version 1 document is still changing before release; the typed model and validation tests remain authoritative for now.

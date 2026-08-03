@@ -115,6 +115,37 @@ public sealed class AliasApiTests : IDisposable
     }
 
     [Fact]
+    public async Task CreatesEvaluatesAndDeletesCalculatedSensorOverHttp()
+    {
+        using var client = _factory.CreateClient();
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync(
+            "/api/aliases/temperature.input",
+            new { displayName = "Input Temperature", sensorId = SimulatedSensorSource.TemperatureSensorId })).StatusCode);
+
+        var created = await client.PutAsJsonAsync(
+            "/api/calculations/temperature.offset",
+            new { displayName = "Adjusted Temperature", formula = "temperature.input + 5" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, created.StatusCode);
+
+        var scaled = await client.PutAsJsonAsync(
+            "/api/calculations/temperature.scaled",
+            new { displayName = "Scaled Temperature", formula = "temperature.input * 2" });
+        Assert.Equal(HttpStatusCode.OK, scaled.StatusCode);
+
+        var result = await client.GetFromJsonAsync<SensorReading>("/api/sensors/by-alias/temperature.scaled");
+        Assert.NotNull(result);
+        Assert.Equal(72, result.Value);
+        Assert.Equal(UnitCode.Celsius, result.Unit);
+        Assert.Equal("calculated:temperature.scaled", result.Id);
+
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await client.DeleteAsync("/api/calculations/temperature.scaled")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await client.GetAsync("/api/sensors/by-alias/temperature.scaled")).StatusCode);
+    }
+
+    [Fact]
     public void MalformedConfigurationPreventsStartupAndIdentifiesPreviousFile()
     {
         var configPath = Path.Combine(_root, "malformed-config.json");

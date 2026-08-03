@@ -35,7 +35,7 @@ normalized sensors -> aliases -> calculated sensors -> local HTTP API
                                                        `-> future local consumers
 ```
 
-Units are structured data rather than arbitrary display strings. Initial calculations will require matching units. User-selectable conversion is deliberately deferred, but the core model distinguishes absolute temperatures from temperature differences so it can be added safely.
+Units are structured data rather than arbitrary display strings. Calculated sensors require exact matching units and expose the same reading contract as collected sensors. User-selectable conversion is deliberately deferred, but the core model distinguishes absolute temperatures from temperature differences so it can be added safely. See [calculated sensor setup](docs/calculated-sensors.md) and the [formula semantics](docs/formula-semantics.md).
 
 ## Requirements
 

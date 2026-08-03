@@ -24,7 +24,7 @@ Supported tokens:
 - parentheses
 - unary negative
 
-Alias tokens follow the existing alias-key rules. Decimal constants are invariant-culture, dimensionless scalars. Scientific notation and unit suffixes are deferred.
+Alias tokens follow the alias-key rules: lowercase alphanumeric segments separated by dots or underscores. Hyphens are excluded because they conflict with the subtraction operator. Decimal constants are invariant-culture, dimensionless scalars. Scientific notation and unit suffixes are deferred.
 
 The implementation should use a tokenizer followed by a recursive-descent parser with conventional precedence:
 
