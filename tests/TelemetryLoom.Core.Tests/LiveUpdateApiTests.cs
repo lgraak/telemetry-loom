@@ -19,7 +19,7 @@ public sealed class LiveUpdateApiTests : IDisposable
     }
 
     [Fact]
-    public async Task StreamReturnsImmediateServerSentSensorSnapshot()
+    public async Task StreamReturnsImmediateAndSubsequentServerSentSensorSnapshots()
     {
         using var client = _factory.CreateClient();
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -31,26 +31,21 @@ public sealed class LiveUpdateApiTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
+        Assert.True(response.Headers.CacheControl?.NoCache == true);
+        Assert.DoesNotContain(
+            "keep-alive",
+            response.Headers.Connection,
+            StringComparer.OrdinalIgnoreCase);
         await using var body = await response.Content.ReadAsStreamAsync(cancellation.Token);
         using var reader = new StreamReader(body);
 
-        var idLine = await reader.ReadLineAsync(cancellation.Token);
-        var eventLine = await reader.ReadLineAsync(cancellation.Token);
-        var dataLine = await reader.ReadLineAsync(cancellation.Token);
-        var separator = await reader.ReadLineAsync(cancellation.Token);
+        var first = await ReadEvent(reader, cancellation.Token);
+        var second = await ReadEvent(reader, cancellation.Token);
 
-        Assert.StartsWith("id: ", idLine, StringComparison.Ordinal);
-        Assert.Equal("event: sensors", eventLine);
-        Assert.StartsWith("data: ", dataLine, StringComparison.Ordinal);
-        Assert.Equal(string.Empty, separator);
-
-        using var json = JsonDocument.Parse(dataLine![6..]);
-        Assert.Equal(1, json.RootElement.GetProperty("schemaVersion").GetInt32());
-        var eventId = long.Parse(idLine![4..]);
-        Assert.True(eventId > 0);
-        Assert.Equal(eventId, json.RootElement.GetProperty("sequence").GetInt64());
-        Assert.NotEmpty(json.RootElement.GetProperty("sensors").EnumerateArray());
-        Assert.Equal("Celsius", json.RootElement.GetProperty("sensors")[0].GetProperty("unit").GetString());
+        Assert.True(first.Id > 0);
+        Assert.True(second.Id > first.Id);
+        AssertSnapshot(first);
+        AssertSnapshot(second);
     }
 
     [Theory]
@@ -70,6 +65,29 @@ public sealed class LiveUpdateApiTests : IDisposable
         Directory.Delete(_root, recursive: true);
     }
 
+    private static async Task<SseEvent> ReadEvent(StreamReader reader, CancellationToken cancellationToken)
+    {
+        var idLine = await reader.ReadLineAsync(cancellationToken);
+        var eventLine = await reader.ReadLineAsync(cancellationToken);
+        var dataLine = await reader.ReadLineAsync(cancellationToken);
+        var separator = await reader.ReadLineAsync(cancellationToken);
+
+        Assert.StartsWith("id: ", idLine, StringComparison.Ordinal);
+        Assert.Equal("event: sensors", eventLine);
+        Assert.StartsWith("data: ", dataLine, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, separator);
+        return new SseEvent(long.Parse(idLine![4..]), dataLine![6..]);
+    }
+
+    private static void AssertSnapshot(SseEvent snapshot)
+    {
+        using var json = JsonDocument.Parse(snapshot.Json);
+        Assert.Equal(1, json.RootElement.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal(snapshot.Id, json.RootElement.GetProperty("sequence").GetInt64());
+        Assert.NotEmpty(json.RootElement.GetProperty("sensors").EnumerateArray());
+        Assert.Equal("Celsius", json.RootElement.GetProperty("sensors")[0].GetProperty("unit").GetString());
+    }
+
     private WebApplicationFactory<Program> CreateFactory(int intervalMilliseconds) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
             builder.ConfigureAppConfiguration((_, configuration) =>
@@ -79,4 +97,6 @@ public sealed class LiveUpdateApiTests : IDisposable
                     ["Hwmon:RootPath"] = Path.Combine(_root, "missing-hwmon"),
                     ["TelemetryLoom:LiveUpdates:IntervalMilliseconds"] = intervalMilliseconds.ToString()
                 })));
+
+    private sealed record SseEvent(long Id, string Json);
 }

@@ -14,7 +14,6 @@ public static class SensorStreamEndpoint
         context.Response.StatusCode = StatusCodes.Status200OK;
         context.Response.ContentType = "text/event-stream";
         context.Response.Headers.CacheControl = "no-cache, no-transform";
-        context.Response.Headers.Connection = "keep-alive";
         context.Response.Headers["X-Accel-Buffering"] = "no";
 
         try
