@@ -91,6 +91,8 @@ The command reads only standard hwmon identity, input, average, label, and fault
 
 See [docs/aliases.md](docs/aliases.md) for alias naming, API operations, configuration paths, and missing-hardware behavior.
 
+Milestone 4 formula behavior is specified in [docs/formula-semantics.md](docs/formula-semantics.md). The parser and evaluator are not implemented yet.
+
 ## Planned milestones
 
 1. Repository foundation and simulated sensor (complete)

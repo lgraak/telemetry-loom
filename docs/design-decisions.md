@@ -16,6 +16,10 @@ Collectors provide stable sensor IDs and source metadata but do not assign user 
 
 Configuration remains versioned JSON until its operational limits justify a database. Mutable configuration is written by the service through the local API. Direct edits require a restart.
 
+Alias records persist the stable unit code and quantity needed to represent missing hardware. Display symbols are derived from `UnitCatalog` instead of persisted, avoiding redundant metadata that can drift from the canonical catalog.
+
+Successful replacement retains the prior active file as `config.json.previous`. Recovery is deliberate: malformed active configuration fails startup and identifies the previous file rather than loading it silently.
+
 ## HTTP API stability
 
 The localhost HTTP API is pre-release and may change until the first external consumer, the InfoPanel plugin, is implemented. `/api/v1` is intentionally deferred while the contract is still being shaped.

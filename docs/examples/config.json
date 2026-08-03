@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "key": "cooling.air.intake",
+      "displayName": "Radiator Intake Air",
+      "sensorId": "hwmon:acpitz-0:43c1381b14be5fc2:temp:1:input",
+      "quantity": "Temperature",
+      "unit": "Celsius",
+      "source": "hwmon"
+    }
+  ]
+}
