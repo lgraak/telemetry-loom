@@ -8,5 +8,4 @@ public sealed record SensorAliasDefinition(
     string SensorId,
     QuantityKind Quantity,
     UnitCode Unit,
-    string UnitSymbol,
     string Source);

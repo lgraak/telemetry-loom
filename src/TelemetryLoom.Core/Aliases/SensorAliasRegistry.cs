@@ -93,7 +93,6 @@ public sealed partial class SensorAliasRegistry
                     normalizedSensorId,
                     sensor.Quantity,
                     sensor.Unit,
-                    sensor.UnitSymbol,
                     sensor.Source);
             var next = _aliases
                 .Where(alias => !string.Equals(alias.Key, key, StringComparison.Ordinal))
@@ -198,7 +197,7 @@ public sealed partial class SensorAliasRegistry
         }
 
         var unit = UnitCatalog.Get(alias.Unit);
-        if (unit.Quantity != alias.Quantity || !string.Equals(unit.Symbol, alias.UnitSymbol, StringComparison.Ordinal))
+        if (unit.Quantity != alias.Quantity)
         {
             throw new AliasValidationException($"Alias '{alias.Key}' has inconsistent unit metadata.");
         }
@@ -216,7 +215,7 @@ public sealed partial class SensorAliasRegistry
             alias.SensorId,
             alias.Quantity,
             alias.Unit,
-            alias.UnitSymbol,
+            UnitCatalog.Get(alias.Unit).Symbol,
             alias.Source,
             status);
 }

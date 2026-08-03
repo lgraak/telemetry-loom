@@ -1,5 +1,6 @@
 using TelemetryLoom.Contracts.Aliases;
 using TelemetryLoom.Contracts.Sensors;
+using TelemetryLoom.Contracts.Units;
 using TelemetryLoom.Core.Sensors;
 
 namespace TelemetryLoom.Core.Aliases;
@@ -69,7 +70,7 @@ public sealed class AliasedSensorCatalog(
             null,
             alias.Quantity,
             alias.Unit,
-            alias.UnitSymbol,
+            UnitCatalog.Get(alias.Unit).Symbol,
             alias.Source,
             SensorStatus.Unavailable,
             null,

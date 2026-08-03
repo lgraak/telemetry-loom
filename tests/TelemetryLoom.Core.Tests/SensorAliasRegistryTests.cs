@@ -113,6 +113,34 @@ public sealed class SensorAliasRegistryTests
         Assert.Empty(registry.GetDefinitions());
     }
 
+    [Fact]
+    public void FailedReplacementLeavesActiveFileAndRegistryStateUnchanged()
+    {
+        var root = CreateTemporaryDirectory();
+        var path = Path.Combine(root, "config.json");
+        var source = new MutableSensorSource(CreateReading());
+        var sensors = new SensorCatalog([source]);
+        var store = new JsonAliasConfigurationStore(path);
+        var registry = new SensorAliasRegistry(sensors, store);
+
+        try
+        {
+            registry.Upsert("cooling.air.intake", "Original Name", "fixture:temperature:1");
+            Directory.CreateDirectory(store.PreviousPath);
+
+            Assert.ThrowsAny<IOException>(() =>
+                registry.Upsert("cooling.air.intake", "Changed Name", "fixture:temperature:1"));
+
+            Assert.Equal("Original Name", Assert.Single(registry.GetDefinitions()).DisplayName);
+            Assert.Equal("Original Name", Assert.Single(store.Load()).DisplayName);
+            Assert.Empty(Directory.EnumerateFiles(root, "*.tmp"));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     private static SensorReading CreateReading() =>
         new(
             "fixture:temperature:1",

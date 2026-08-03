@@ -15,6 +15,7 @@ public sealed class JsonAliasConfigurationStore(string path) : IAliasConfigurati
     };
 
     public string Path { get; } = System.IO.Path.GetFullPath(path);
+    public string PreviousPath => $"{Path}.previous";
 
     public IReadOnlyList<SensorAliasDefinition> Load()
     {
@@ -23,18 +24,19 @@ public sealed class JsonAliasConfigurationStore(string path) : IAliasConfigurati
             return [];
         }
 
-        var document = JsonSerializer.Deserialize<AliasConfigurationDocument>(File.ReadAllText(Path), SerializerOptions)
-            ?? throw new InvalidDataException($"Alias configuration is empty: {Path}");
-
-        if (document.SchemaVersion != AliasConfigurationDocument.CurrentSchemaVersion)
+        try
         {
-            throw new InvalidDataException(
-                $"Unsupported alias configuration schema {document.SchemaVersion}; " +
-                $"expected {AliasConfigurationDocument.CurrentSchemaVersion}.");
+            return DeserializeDocument(File.ReadAllBytes(Path), Path).Aliases;
         }
-
-        return document.Aliases
-            ?? throw new InvalidDataException($"Alias configuration has a null aliases collection: {Path}");
+        catch (Exception exception) when (exception is JsonException or InvalidDataException)
+        {
+            var recovery = File.Exists(PreviousPath)
+                ? $" A previous configuration exists at '{PreviousPath}' and can be restored deliberately."
+                : string.Empty;
+            throw new InvalidDataException(
+                $"Alias configuration is invalid: {Path}. {exception.Message}{recovery}",
+                exception);
+        }
     }
 
     public void Save(IReadOnlyCollection<SensorAliasDefinition> aliases)
@@ -54,6 +56,7 @@ public sealed class JsonAliasConfigurationStore(string path) : IAliasConfigurati
                 Aliases = [.. aliases.OrderBy(alias => alias.Key, StringComparer.Ordinal)]
             };
             var bytes = JsonSerializer.SerializeToUtf8Bytes(document, SerializerOptions);
+            _ = DeserializeDocument(bytes, "serialized alias configuration");
 
             using (var stream = new FileStream(
                        temporaryPath,
@@ -67,7 +70,16 @@ public sealed class JsonAliasConfigurationStore(string path) : IAliasConfigurati
                 stream.Flush(flushToDisk: true);
             }
 
-            File.Move(temporaryPath, Path, overwrite: true);
+            _ = DeserializeDocument(File.ReadAllBytes(temporaryPath), temporaryPath);
+
+            if (File.Exists(Path))
+            {
+                File.Replace(temporaryPath, Path, PreviousPath, ignoreMetadataErrors: true);
+            }
+            else
+            {
+                File.Move(temporaryPath, Path);
+            }
         }
         finally
         {
@@ -76,5 +88,25 @@ public sealed class JsonAliasConfigurationStore(string path) : IAliasConfigurati
                 File.Delete(temporaryPath);
             }
         }
+    }
+
+    private static AliasConfigurationDocument DeserializeDocument(ReadOnlySpan<byte> bytes, string source)
+    {
+        var document = JsonSerializer.Deserialize<AliasConfigurationDocument>(bytes, SerializerOptions)
+            ?? throw new InvalidDataException($"Alias configuration is empty: {source}");
+
+        if (document.SchemaVersion != AliasConfigurationDocument.CurrentSchemaVersion)
+        {
+            throw new InvalidDataException(
+                $"Unsupported alias configuration schema {document.SchemaVersion}; " +
+                $"expected {AliasConfigurationDocument.CurrentSchemaVersion}.");
+        }
+
+        if (document.Aliases is null)
+        {
+            throw new InvalidDataException($"Alias configuration has a null aliases collection: {source}");
+        }
+
+        return document;
     }
 }

@@ -43,7 +43,7 @@ Creating an alias or rebinding one to a different sensor requires the target sen
 
 ## Persistence
 
-Configuration uses a versioned JSON document. Writes create and flush a temporary file in the same directory before atomically replacing the active file. A failed write does not replace the registry's in-memory state.
+Configuration uses a versioned JSON document. Writes create, flush, and validate a temporary file in the same directory before atomically replacing the active file. When an active file already exists, its prior contents are retained as `config.json.previous`. A failed write does not replace the active file or the registry's in-memory state.
 
 The default user-service locations are:
 
@@ -56,6 +56,8 @@ Override the path with the .NET configuration key `TelemetryLoom:ConfigPath`. En
 TelemetryLoom__ConfigPath=/var/lib/telemetry-loom/config.json telemetry-loom
 ```
 
-The persisted record snapshots quantity, unit, symbol, and source metadata. If hardware disappears, its configured alias remains in `/api/sensors` with an `Unavailable` status and no value. This preserves references for future formulas and consumers until the device returns.
+The persisted record snapshots quantity, stable unit code, and source metadata. The display symbol is derived from the canonical `UnitCatalog` and is not persisted. If hardware disappears, its configured alias remains in `/api/sensors` with an `Unavailable` status and no value. This preserves references for future formulas and consumers until the device returns.
+
+The service does not silently load `config.json.previous` when the active configuration is malformed. Startup fails with an error that identifies the previous file. Recovery is deliberate: stop the service, inspect both files, replace `config.json` with the chosen valid version, and restart.
 
 Prefer the API for edits while the service is running. The file is loaded when the alias registry starts; direct file edits require a service restart.
