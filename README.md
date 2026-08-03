@@ -71,6 +71,8 @@ Kestrel__Endpoints__Http__Url=http://127.0.0.1:5200 dotnet run --project src/Tel
 
 The service must remain localhost-only by default. Remote access and authentication are outside the initial scope.
 
+The HTTP API is pre-release and may change until the InfoPanel plugin becomes its first external consumer. Breaking changes must be deliberate and versioned after that point. See [docs/design-decisions.md](docs/design-decisions.md).
+
 ## Test
 
 ```bash
