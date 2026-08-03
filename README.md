@@ -6,7 +6,7 @@ The project is intentionally not an attempt to recreate HWiNFO. Its job is to si
 
 ## Current status
 
-Milestone 4 adds typed calculated sensors to the repository foundation, Linux hwmon discovery, and durable aliases:
+Milestone 5 adds live sensor snapshots to the repository foundation, Linux hwmon discovery, durable aliases, and typed calculated sensors:
 
 - a structured sensor model with quantity, unit, availability, and timestamp metadata
 - a simulated Celsius temperature sensor with the stable ID `simulated:temperature:1`
@@ -21,11 +21,12 @@ Milestone 4 adds typed calculated sensors to the repository foundation, Linux hw
 - calculated-sensor dependency chains with cycle rejection
 - explicit missing, unavailable, stale, and calculation-error propagation
 - calculated readings through the same sensor API as collected readings
+- versioned Server-Sent Events snapshots with configurable cadence
 - a localhost HTTP API
 - a minimal browser status page
 - automated unit tests and GitHub Actions CI
 
-NVML, unit conversion controls, live API updates, and the InfoPanel plugin are not implemented yet.
+NVML, unit conversion controls, the InfoPanel plugin, and the browser configuration interface are not implemented yet.
 
 ## Architecture direction
 
@@ -66,6 +67,7 @@ curl http://127.0.0.1:5198/api/sensors
 curl http://127.0.0.1:5198/api/status
 curl http://127.0.0.1:5198/api/aliases
 curl http://127.0.0.1:5198/api/calculations
+curl -N http://127.0.0.1:5198/api/sensors/stream
 ```
 
 Override the local listen address with ASP.NET Core Kestrel configuration, for example:
@@ -98,13 +100,15 @@ See [docs/aliases.md](docs/aliases.md) for alias naming, API operations, configu
 
 See [docs/calculated-sensors.md](docs/calculated-sensors.md) for calculated-sensor setup and [docs/formula-semantics.md](docs/formula-semantics.md) for the exact language, dimensional, and status rules.
 
+See [docs/live-updates.md](docs/live-updates.md) for the Server-Sent Events snapshot contract, cadence configuration, and reconnect behavior.
+
 ## Planned milestones
 
 1. Repository foundation and simulated sensor (complete)
 2. hwmon discovery and stable sensor identity (complete; validated on CachyOS with AMD CPU/GPU, NVMe, ACPI, and Intel Wi-Fi sensors)
 3. aliases and JSON configuration persistence (complete; validated against live CachyOS hwmon data and across a service restart)
 4. unit-aware arithmetic formulas (complete; validated on CachyOS through tests and a live API/persistence exercise)
-5. live API updates
+5. live API updates (complete; Server-Sent Events snapshot stream)
 6. InfoPanel plugin
 7. browser configuration interface
 8. installation documentation and systemd packaging
