@@ -11,4 +11,5 @@ public sealed record SensorReading(
     string Source,
     SensorStatus Status,
     DateTimeOffset? LastSuccessfulUpdate,
-    IReadOnlyDictionary<string, string> Metadata);
+    IReadOnlyDictionary<string, string> Metadata,
+    SensorPresentation? Presentation = null);

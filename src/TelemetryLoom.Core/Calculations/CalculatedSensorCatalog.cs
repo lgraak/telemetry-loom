@@ -160,6 +160,16 @@ public sealed class CalculatedSensorCatalog(
         return new SensorReading(
             $"calculated:{definition.Key}", definition.DisplayName, definition.Key, value,
             definition.Quantity, definition.Unit, UnitCatalog.Get(definition.Unit).Symbol,
-            "calculated", status, lastSuccessfulUpdate, metadata);
+            "calculated", status, lastSuccessfulUpdate, metadata,
+            new SensorPresentation(
+                definition.DisplayName,
+                definition.DisplayName,
+                "User-defined calculated sensor.",
+                "Calculated",
+                "Calculated Sensors",
+                "calculated",
+                definition.Quantity.ToString(),
+                InterpretationConfidence.UserDefined,
+                null));
     }
 }

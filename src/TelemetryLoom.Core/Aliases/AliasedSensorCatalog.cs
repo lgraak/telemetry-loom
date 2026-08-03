@@ -6,7 +6,7 @@ using TelemetryLoom.Core.Sensors;
 namespace TelemetryLoom.Core.Aliases;
 
 public sealed class AliasedSensorCatalog(
-    SensorCatalog sensorCatalog,
+    ISensorCatalog sensorCatalog,
     SensorAliasRegistry aliasRegistry)
 {
     public IReadOnlyList<string> SourceNames => sensorCatalog.SourceNames;
@@ -59,7 +59,8 @@ public sealed class AliasedSensorCatalog(
         {
             DisplayName = alias.DisplayName,
             Alias = alias.Key,
-            Metadata = WithAliasMetadata(sensor.Metadata, alias.Key)
+            Metadata = WithAliasMetadata(sensor.Metadata, alias.Key),
+            Presentation = ApplyAliasPresentation(sensor, alias)
         };
 
     private static SensorReading CreateUnavailableReading(SensorAliasDefinition alias) =>
@@ -79,7 +80,40 @@ public sealed class AliasedSensorCatalog(
                 ["aliasKey"] = alias.Key,
                 ["boundSensorId"] = alias.SensorId,
                 ["missingReason"] = "Bound sensor is not currently available."
-            });
+            },
+            new SensorPresentation(
+                alias.DisplayName,
+                alias.DisplayName,
+                "User-defined alias whose bound sensor is not currently available.",
+                "Other",
+                "Unavailable Sensors",
+                "alias:unavailable",
+                alias.Quantity.ToString(),
+                InterpretationConfidence.UserDefined,
+                null));
+
+    private static SensorPresentation ApplyAliasPresentation(
+        SensorReading sensor,
+        SensorAliasDefinition alias)
+    {
+        var existing = sensor.Presentation;
+        return existing is null
+            ? new SensorPresentation(
+                sensor.DisplayName,
+                alias.DisplayName,
+                "User-defined sensor alias.",
+                "Other",
+                sensor.Source,
+                $"{sensor.Source}:default",
+                sensor.Quantity.ToString(),
+                InterpretationConfidence.UserDefined,
+                null)
+            : existing with
+            {
+                DisplayName = alias.DisplayName,
+                InterpretationConfidence = InterpretationConfidence.UserDefined
+            };
+    }
 
     private static IReadOnlyDictionary<string, string> WithAliasMetadata(
         IReadOnlyDictionary<string, string> metadata,

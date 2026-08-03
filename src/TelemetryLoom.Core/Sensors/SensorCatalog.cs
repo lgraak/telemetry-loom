@@ -2,7 +2,7 @@ using TelemetryLoom.Contracts.Sensors;
 
 namespace TelemetryLoom.Core.Sensors;
 
-public sealed class SensorCatalog(IEnumerable<ISensorSource> sources)
+public sealed class SensorCatalog(IEnumerable<ISensorSource> sources) : ISensorCatalog
 {
     private readonly IReadOnlyList<ISensorSource> _sources = [.. sources];
 
