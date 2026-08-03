@@ -115,11 +115,39 @@ public sealed class SensorPresentationRegistryTests
         Assert.Equal(InterpretationConfidence.UserDefined, aliased.Presentation.InterpretationConfidence);
     }
 
+    [Fact]
+    public void EnrichesMustafarFixtureAndKeepsUnknownDriversGeneric()
+    {
+        var enriched = LoadSource("mustafar-amd-proxmox.json").GetSensors()
+            .Select(new SensorPresentationRegistry().Enrich)
+            .ToArray();
+
+        AssertPresentation(enriched, "k10temp", "Tccd1", "input",
+            "CPU CCD 1 Temperature", "AMD CPU", InterpretationConfidence.Known, "k10temp.tccd");
+        Assert.Equal(2, enriched.Count(sensor =>
+            sensor.Metadata["driver"] == "nvme" &&
+            sensor.Presentation?.RawLabel == "Composite" &&
+            sensor.Presentation.DeviceDisplayName == "NVMe"));
+
+        var ethernet = enriched.Single(sensor => sensor.Metadata["driver"].StartsWith("r8169", StringComparison.Ordinal));
+        Assert.Equal(InterpretationConfidence.Generic, ethernet.Presentation!.InterpretationConfidence);
+        Assert.Null(ethernet.Presentation.DocumentationKey);
+
+        Assert.All(enriched.Where(sensor => sensor.Metadata["driver"] == "spd5118"), sensor =>
+        {
+            Assert.Equal(InterpretationConfidence.Generic, sensor.Presentation!.InterpretationConfidence);
+            Assert.Null(sensor.Presentation.DocumentationKey);
+        });
+    }
+
     private static HwmonSensorSource LoadCachyOsSource() =>
+        LoadSource("cachyos-amd.json");
+
+    private static HwmonSensorSource LoadSource(string fixtureName) =>
         new(FixtureHwmonSnapshotSource.FromFile(Path.Combine(
             AppContext.BaseDirectory,
             "TestData",
-            "cachyos-amd.json")));
+            fixtureName)));
 
     private static SensorReading Reading(
         string id,

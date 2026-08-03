@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-03T21:44:57.7733023+00:00",
+  "rootPath": "/sys/class/hwmon",
+  "devices": [
+    {
+      "className": "hwmon0",
+      "driverName": "r8169_0_1200:00",
+      "deviceLabel": null,
+      "hardwarePath": "pci0000:00/0000:00:02.1/0000:06:00.0/0000:07:06.0/0000:12:00.0/mdio_bus/r8169-0-1200/r8169-0-1200:00",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "58000"
+      }
+    },
+    {
+      "className": "hwmon1",
+      "driverName": "nvme",
+      "deviceLabel": null,
+      "hardwarePath": "pci0000:00/0000:00:01.2/0000:05:00.0/nvme/nvme0",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "50850",
+        "temp1_label": "Composite",
+        "temp2_input": "50850",
+        "temp2_label": "Sensor 1",
+        "temp3_input": "58850",
+        "temp3_label": "Sensor 2"
+      }
+    },
+    {
+      "className": "hwmon2",
+      "driverName": "nvme",
+      "deviceLabel": null,
+      "hardwarePath": "pci0000:00/0000:00:02.1/0000:06:00.0/0000:07:00.0/0000:08:00.0/nvme/nvme1",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "49850",
+        "temp1_label": "Composite",
+        "temp2_input": "70850",
+        "temp2_label": "Sensor 1",
+        "temp3_input": "49850",
+        "temp3_label": "Sensor 2"
+      }
+    },
+    {
+      "className": "hwmon3",
+      "driverName": "k10temp",
+      "deviceLabel": null,
+      "hardwarePath": "pci0000:00/0000:00:18.3",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "78375",
+        "temp1_label": "Tctl",
+        "temp3_input": "76125",
+        "temp3_label": "Tccd1",
+        "temp4_input": "73500",
+        "temp4_label": "Tccd2"
+      }
+    },
+    {
+      "className": "hwmon4",
+      "driverName": "spd5118",
+      "deviceLabel": null,
+      "hardwarePath": "pci0000:00/0000:00:14.0/i2c-1/1-0051",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "44750"
+      }
+    },
+    {
+      "className": "hwmon5",
+      "driverName": "spd5118",
+      "deviceLabel": null,
+      "hardwarePath": "pci0000:00/0000:00:14.0/i2c-1/1-0053",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "temp1_input": "44500"
+      }
+    },
+    {
+      "className": "hwmon6",
+      "driverName": "amdgpu",
+      "deviceLabel": null,
+      "hardwarePath": "pci0000:00/0000:00:08.1/0000:7b:00.0",
+      "identityQuality": "StableHardwarePath",
+      "attributes": {
+        "freq1_input": "600000000",
+        "freq1_label": "sclk",
+        "in0_input": "1365",
+        "in0_label": "vddgfx",
+        "in1_input": "1305",
+        "in1_label": "vddnb",
+        "power1_input": "7177000",
+        "power1_label": "PPT",
+        "temp1_input": "58000",
+        "temp1_label": "edge"
+      }
+    }
+  ]
+}
