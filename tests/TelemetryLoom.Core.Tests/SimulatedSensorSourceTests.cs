@@ -13,7 +13,7 @@ public sealed class SimulatedSensorSourceTests
         var sensor = Assert.Single(source.GetSensors());
 
         Assert.Equal(SimulatedSensorSource.TemperatureSensorId, sensor.Id);
-        Assert.Equal("demo.temperature", sensor.Alias);
+        Assert.Null(sensor.Alias);
         Assert.Equal(30.0, sensor.Value);
         Assert.Equal(QuantityKind.Temperature, sensor.Quantity);
         Assert.Equal(UnitCode.Celsius, sensor.Unit);
