@@ -17,6 +17,8 @@ data: {"schemaVersion":1,"sequence":42,"capturedAt":"2026-08-03T00:00:00Z","sens
 
 Every event contains the complete current sensor collection, including physical and calculated sensors. Consumers should replace their current snapshot rather than merge partial fields. Full snapshots make reconnect behavior deterministic and prevent deleted or unavailable sensors from lingering in consumer state.
 
+The service samples once per interval and broadcasts that same snapshot to every connected client. Each client has a one-snapshot bounded buffer. If a client cannot keep up, it receives the newest state rather than accumulating stale telemetry or forcing faster clients to wait.
+
 ## Cadence
 
 The default interval is 1000 milliseconds. Configure it through .NET configuration:

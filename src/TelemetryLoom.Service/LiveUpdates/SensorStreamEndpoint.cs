@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
-using TelemetryLoom.Core.Streaming;
 
 namespace TelemetryLoom.Service.LiveUpdates;
 
@@ -9,8 +8,7 @@ public static class SensorStreamEndpoint
 {
     public static async Task Stream(
         HttpContext context,
-        SensorSnapshotStream snapshots,
-        IOptions<LiveUpdateOptions> liveUpdates,
+        SensorSnapshotPublisher snapshots,
         IOptions<JsonOptions> jsonOptions)
     {
         context.Response.StatusCode = StatusCodes.Status200OK;
@@ -21,9 +19,7 @@ public static class SensorStreamEndpoint
 
         try
         {
-            await foreach (var snapshot in snapshots.ReadAllAsync(
-                               liveUpdates.Value.Interval,
-                               context.RequestAborted))
+            await foreach (var snapshot in snapshots.Subscribe(context.RequestAborted))
             {
                 var json = JsonSerializer.Serialize(snapshot, jsonOptions.Value.SerializerOptions);
                 await context.Response.WriteAsync(

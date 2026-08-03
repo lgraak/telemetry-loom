@@ -4,7 +4,6 @@ using TelemetryLoom.Core.Aliases;
 using TelemetryLoom.Core.Configuration;
 using TelemetryLoom.Core.Calculations;
 using TelemetryLoom.Core.Sensors;
-using TelemetryLoom.Core.Streaming;
 using TelemetryLoom.Service.LiveUpdates;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -42,7 +41,6 @@ builder.Services.AddSingleton<CalculatedSensorRegistry>();
 builder.Services.AddSingleton<CalculatedSensorCatalog>();
 builder.Services.AddSingleton<TelemetrySensorCatalog>();
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<SensorSnapshotStream>();
 builder.Services.AddOptions<LiveUpdateOptions>()
     .Bind(builder.Configuration.GetSection("TelemetryLoom:LiveUpdates"))
     .Validate(
@@ -51,6 +49,9 @@ builder.Services.AddOptions<LiveUpdateOptions>()
         $"IntervalMilliseconds must be between {LiveUpdateOptions.MinimumIntervalMilliseconds} " +
         $"and {LiveUpdateOptions.MaximumIntervalMilliseconds}.")
     .ValidateOnStart();
+builder.Services.AddSingleton<SensorSnapshotPublisher>();
+builder.Services.AddHostedService(services =>
+    services.GetRequiredService<SensorSnapshotPublisher>());
 
 var app = builder.Build();
 _ = app.Services.GetRequiredService<SensorAliasRegistry>();
