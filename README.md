@@ -6,7 +6,7 @@ The project is intentionally not an attempt to recreate HWiNFO. Its job is to si
 
 ## Current status
 
-Milestone 3 adds durable sensor aliases and JSON configuration persistence to the repository foundation and Linux hwmon discovery:
+Milestone 4 adds typed calculated sensors to the repository foundation, Linux hwmon discovery, and durable aliases:
 
 - a structured sensor model with quantity, unit, availability, and timestamp metadata
 - a simulated Celsius temperature sensor with the stable ID `simulated:temperature:1`
@@ -17,11 +17,15 @@ Milestone 3 adds durable sensor aliases and JSON configuration persistence to th
 - versioned JSON configuration with atomic replacement
 - unavailable alias preservation when bound hardware is missing
 - localhost alias management and resolution APIs
+- parsed and dimension-checked arithmetic formulas over aliases
+- calculated-sensor dependency chains with cycle rejection
+- explicit missing, unavailable, stale, and calculation-error propagation
+- calculated readings through the same sensor API as collected readings
 - a localhost HTTP API
 - a minimal browser status page
 - automated unit tests and GitHub Actions CI
 
-NVML, formulas, unit conversion, and the InfoPanel plugin are not implemented yet.
+NVML, unit conversion controls, live API updates, and the InfoPanel plugin are not implemented yet.
 
 ## Architecture direction
 
@@ -61,6 +65,7 @@ Open `http://127.0.0.1:5198` or query:
 curl http://127.0.0.1:5198/api/sensors
 curl http://127.0.0.1:5198/api/status
 curl http://127.0.0.1:5198/api/aliases
+curl http://127.0.0.1:5198/api/calculations
 ```
 
 Override the local listen address with ASP.NET Core Kestrel configuration, for example:
@@ -91,14 +96,14 @@ The command reads only standard hwmon identity, input, average, label, and fault
 
 See [docs/aliases.md](docs/aliases.md) for alias naming, API operations, configuration paths, and missing-hardware behavior.
 
-Milestone 4 formula behavior is specified in [docs/formula-semantics.md](docs/formula-semantics.md). The parser and evaluator are not implemented yet.
+See [docs/calculated-sensors.md](docs/calculated-sensors.md) for calculated-sensor setup and [docs/formula-semantics.md](docs/formula-semantics.md) for the exact language, dimensional, and status rules.
 
 ## Planned milestones
 
 1. Repository foundation and simulated sensor (complete)
 2. hwmon discovery and stable sensor identity (complete; validated on CachyOS with AMD CPU/GPU, NVMe, ACPI, and Intel Wi-Fi sensors)
 3. aliases and JSON configuration persistence (complete; validated against live CachyOS hwmon data and across a service restart)
-4. unit-aware arithmetic formulas
+4. unit-aware arithmetic formulas (complete; validated on CachyOS through tests and a live API/persistence exercise)
 5. live API updates
 6. InfoPanel plugin
 7. browser configuration interface

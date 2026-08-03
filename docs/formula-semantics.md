@@ -1,6 +1,6 @@
 # Formula semantics
 
-This document defines the first Milestone 4 formula slice. It is a design contract, not an implemented feature.
+This document defines the implemented first Milestone 4 formula slice and remains the contract for its behavior.
 
 ## Purpose and references
 
