@@ -10,7 +10,7 @@ public static class SensorStreamEndpoint
     public static async Task Stream(
         HttpContext context,
         SensorSnapshotStream snapshots,
-        LiveUpdateOptions liveUpdates,
+        IOptions<LiveUpdateOptions> liveUpdates,
         IOptions<JsonOptions> jsonOptions)
     {
         context.Response.StatusCode = StatusCodes.Status200OK;
@@ -22,7 +22,7 @@ public static class SensorStreamEndpoint
         try
         {
             await foreach (var snapshot in snapshots.ReadAllAsync(
-                               liveUpdates.Interval,
+                               liveUpdates.Value.Interval,
                                context.RequestAborted))
             {
                 var json = JsonSerializer.Serialize(snapshot, jsonOptions.Value.SerializerOptions);

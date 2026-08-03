@@ -43,17 +43,14 @@ builder.Services.AddSingleton<CalculatedSensorCatalog>();
 builder.Services.AddSingleton<TelemetrySensorCatalog>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<SensorSnapshotStream>();
-var liveUpdates = builder.Configuration
-    .GetSection("TelemetryLoom:LiveUpdates")
-    .Get<LiveUpdateOptions>() ?? new LiveUpdateOptions();
-if (liveUpdates.IntervalMilliseconds is < LiveUpdateOptions.MinimumIntervalMilliseconds
-    or > LiveUpdateOptions.MaximumIntervalMilliseconds)
-{
-    throw new InvalidDataException(
-        $"TelemetryLoom:LiveUpdates:IntervalMilliseconds must be between " +
-        $"{LiveUpdateOptions.MinimumIntervalMilliseconds} and {LiveUpdateOptions.MaximumIntervalMilliseconds}.");
-}
-builder.Services.AddSingleton(liveUpdates);
+builder.Services.AddOptions<LiveUpdateOptions>()
+    .Bind(builder.Configuration.GetSection("TelemetryLoom:LiveUpdates"))
+    .Validate(
+        options => options.IntervalMilliseconds is >= LiveUpdateOptions.MinimumIntervalMilliseconds
+            and <= LiveUpdateOptions.MaximumIntervalMilliseconds,
+        $"IntervalMilliseconds must be between {LiveUpdateOptions.MinimumIntervalMilliseconds} " +
+        $"and {LiveUpdateOptions.MaximumIntervalMilliseconds}.")
+    .ValidateOnStart();
 
 var app = builder.Build();
 _ = app.Services.GetRequiredService<SensorAliasRegistry>();
