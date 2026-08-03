@@ -68,6 +68,10 @@ public sealed class AliasApiTests : IDisposable
         {
             Assert.Equal("cooling.air.intake", sensorJson.RootElement.GetProperty("alias").GetString());
             Assert.Equal("Radiator Intake Air", sensorJson.RootElement.GetProperty("displayName").GetString());
+            var presentation = sensorJson.RootElement.GetProperty("presentation");
+            Assert.Equal("Simulated Temperature", presentation.GetProperty("rawLabel").GetString());
+            Assert.Equal("Radiator Intake Air", presentation.GetProperty("displayName").GetString());
+            Assert.Equal("UserDefined", presentation.GetProperty("interpretationConfidence").GetString());
         }
 
         var rename = await client.PutAsJsonAsync(

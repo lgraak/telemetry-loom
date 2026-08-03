@@ -86,6 +86,9 @@ public sealed class LiveUpdateApiTests : IDisposable
         Assert.Equal(snapshot.Id, json.RootElement.GetProperty("sequence").GetInt64());
         Assert.NotEmpty(json.RootElement.GetProperty("sensors").EnumerateArray());
         Assert.Equal("Celsius", json.RootElement.GetProperty("sensors")[0].GetProperty("unit").GetString());
+        Assert.Equal(
+            "Simulated Temperature",
+            json.RootElement.GetProperty("sensors")[0].GetProperty("presentation").GetProperty("rawLabel").GetString());
     }
 
     private WebApplicationFactory<Program> CreateFactory(int intervalMilliseconds) =>

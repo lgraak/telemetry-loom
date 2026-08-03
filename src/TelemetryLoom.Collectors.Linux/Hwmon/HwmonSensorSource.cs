@@ -74,6 +74,20 @@ public sealed partial class HwmonSensorSource(
         var label = device.Attributes.TryGetValue(labelKey, out var configuredLabel) && !string.IsNullOrWhiteSpace(configuredLabel)
             ? configuredLabel
             : $"{device.DriverName} {definition.DisplayName} {channel}";
+        var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["driver"] = device.DriverName,
+            ["hardwarePath"] = HwmonPathIdentity.NormalizeHardwarePath(device.HardwarePath),
+            ["deviceKey"] = HwmonPathIdentity.DeviceKey(device.HardwarePath),
+            ["identityQuality"] = device.IdentityQuality.ToString(),
+            ["sourceClassName"] = device.ClassName,
+            ["sensorType"] = sensorType,
+            ["channel"] = channel.ToString(CultureInfo.InvariantCulture),
+            ["measurement"] = measurement,
+            ["inputAttribute"] = attributeName,
+            ["nativeScaleDivisor"] = definition.Divisor.ToString(CultureInfo.InvariantCulture)
+        };
+        if (!string.IsNullOrWhiteSpace(device.DeviceLabel)) metadata["deviceLabel"] = device.DeviceLabel;
 
         return new SensorReading(
             HwmonStableId.Create(device.DriverName, device.HardwarePath, sensorType, channel, measurement),
@@ -86,18 +100,7 @@ public sealed partial class HwmonSensorSource(
             Name,
             available ? SensorStatus.Available : SensorStatus.Unavailable,
             available ? _timeProvider.GetUtcNow() : null,
-            new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["driver"] = device.DriverName,
-                ["hardwarePath"] = HwmonPathIdentity.NormalizeHardwarePath(device.HardwarePath),
-                ["identityQuality"] = device.IdentityQuality.ToString(),
-                ["sourceClassName"] = device.ClassName,
-                ["sensorType"] = sensorType,
-                ["channel"] = channel.ToString(CultureInfo.InvariantCulture),
-                ["measurement"] = measurement,
-                ["inputAttribute"] = attributeName,
-                ["nativeScaleDivisor"] = definition.Divisor.ToString(CultureInfo.InvariantCulture)
-            });
+            metadata);
     }
 
     private sealed record SensorTypeDefinition(

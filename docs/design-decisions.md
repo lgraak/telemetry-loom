@@ -30,9 +30,19 @@ No implicit unit conversion occurs. Dependency rebinding that changes a configur
 
 ## HTTP API stability
 
-The localhost HTTP API is pre-release and may change until the first external consumer, the InfoPanel plugin, is implemented. `/api/v1` is intentionally deferred while the contract is still being shaped.
+The InfoPanel plugin is the first external consumer of the localhost HTTP API. Breaking changes must be deliberate and exposed through a versioned contract. `/api/v1` remains deferred until a concrete breaking change requires it.
 
-Once InfoPanel consumes the API, breaking changes must be deliberate and exposed through a versioned contract.
+The initial InfoPanel integration polls `GET /api/sensors` at the host-managed plugin cadence. InfoPanel-linux already owns demand gating, cancellation, idle stop, resume, and module reload, so a separate long-lived SSE worker would duplicate lifecycle management. SSE remains the appropriate stream contract for consumers that own a continuous connection.
+
+The plugin defaults to `http://127.0.0.1:5198/` but accepts an absolute HTTP or HTTPS base URL. This keeps later remote-host support possible without exposing the service beyond loopback or adding authentication prematurely.
+
+## Presentation enrichment
+
+Normalization and presentation are separate stages. Collectors own stable IDs, values, units, status, and source metadata. `SensorPresentationRegistry` consumes those structured fields and adds descriptive metadata before aliases and calculations are applied.
+
+The API exposes presentation as an optional additive object. Existing reading fields are unchanged. Alias display names take precedence over glossary names and receive `UserDefined` confidence, while the underlying raw label, description, documentation key, and device grouping remain available.
+
+Mappings live in a small typed registry until their size or update cadence justifies external data storage. Rules match structured source metadata; parsing stable IDs is prohibited. Unknown sensors remain visible with `Generic` confidence rather than receiving a guessed interpretation.
 
 ## Live update transport
 

@@ -77,6 +77,23 @@ public sealed class HwmonSensorSourceTests
         Assert.DoesNotContain(sensors, sensor => sensor.Metadata["driver"] == "hidpp_battery_0");
     }
 
+    [Fact]
+    public void ParsesRealMustafarAmdProxmoxFixture()
+    {
+        var sensors = LoadSource("mustafar-amd-proxmox.json").GetSensors();
+
+        Assert.Equal(17, sensors.Count);
+        Assert.Equal(2, sensors.Count(sensor => sensor.Metadata["driver"] == "nvme" && sensor.Metadata["channel"] == "1"));
+        AssertDeviceReading(sensors, "k10temp", "temp", "input", 1, 78.375d, UnitCode.Celsius);
+        AssertDeviceReading(sensors, "k10temp", "temp", "input", 3, 76.125d, UnitCode.Celsius);
+        AssertDeviceReading(sensors, "amdgpu", "freq", "input", 1, 600_000_000d, UnitCode.Hertz);
+        AssertDeviceReading(sensors, "amdgpu", "power", "input", 1, 7.177d, UnitCode.Watts);
+        Assert.Equal(2, sensors.Count(sensor => sensor.Metadata["driver"] == "spd5118"));
+        Assert.All(sensors, sensor => Assert.Equal(
+            HwmonIdentityQuality.StableHardwarePath.ToString(),
+            sensor.Metadata["identityQuality"]));
+    }
+
     private static HwmonSensorSource LoadSource(string name) =>
         new(FixtureHwmonSnapshotSource.FromFile(FixturePath(name)));
 

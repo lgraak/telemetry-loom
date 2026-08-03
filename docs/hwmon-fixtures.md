@@ -31,6 +31,17 @@ The fixture includes:
 
 The tool deliberately does not read serial-number attributes, device firmware, thresholds, fan controls, PWM controls, or unrelated sysfs files. A fixture still describes hardware topology and live readings, so inspect it before sharing.
 
+Repository fixtures currently cover:
+
+| Fixture | Broad platform coverage |
+|---|---|
+| `cachyos-amd.json` | CachyOS with AMD CPU/GPU, NVMe, ACPI, and Intel Wi-Fi hwmon devices |
+| `mustafar-amd-proxmox.json` | AMD-based Proxmox host with AMD CPU/GPU, two NVMe devices, Ethernet, and SPD temperature devices |
+
+Endor and Tython were considered for this enrichment slice but were not reachable with the available SSH credentials. They remain future fixture targets, not inferred coverage.
+
+See [contributing sensor enrichment](contributing-sensor-enrichment.md) for the source, confidence, mapping, and test requirements applied to new fixtures.
+
 ## Stable IDs
 
 An ID has this form:

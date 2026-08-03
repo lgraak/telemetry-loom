@@ -4,6 +4,7 @@ using TelemetryLoom.Core.Aliases;
 using TelemetryLoom.Core.Configuration;
 using TelemetryLoom.Core.Calculations;
 using TelemetryLoom.Core.Sensors;
+using TelemetryLoom.Core.Presentation;
 using TelemetryLoom.Service.LiveUpdates;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,10 @@ if (Directory.Exists(hwmonRoot))
 }
 
 builder.Services.AddSingleton<SensorCatalog>();
+builder.Services.AddSingleton<SensorPresentationRegistry>();
+builder.Services.AddSingleton<EnrichedSensorCatalog>();
+builder.Services.AddSingleton<ISensorCatalog>(services =>
+    services.GetRequiredService<EnrichedSensorCatalog>());
 builder.Services.AddSingleton<ITelemetryConfigurationStore>(services =>
 {
     var configuration = services.GetRequiredService<IConfiguration>();
