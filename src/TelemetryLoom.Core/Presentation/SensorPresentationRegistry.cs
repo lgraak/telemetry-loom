@@ -45,7 +45,7 @@ public sealed partial class SensorPresentationRegistry
             "GPU", "AMD GPU", "Power", InterpretationConfidence.Known, "amdgpu.ppt", "input"),
         Rule("nvme", "Composite", QuantityKind.Temperature,
             "NVMe Composite Temperature",
-            "Overall thermal value selected by the NVMe device.",
+            "Composite thermal value reported by the NVMe device; its computation is device-specific.",
             "Storage", "NVMe", "Temperature", InterpretationConfidence.Known, "nvme.composite")
     ];
 

@@ -36,6 +36,14 @@ The initial InfoPanel integration polls `GET /api/sensors` at the host-managed p
 
 The plugin defaults to `http://127.0.0.1:5198/` but accepts an absolute HTTP or HTTPS base URL. This keeps later remote-host support possible without exposing the service beyond loopback or adding authentication prematurely.
 
+## Presentation enrichment
+
+Normalization and presentation are separate stages. Collectors own stable IDs, values, units, status, and source metadata. `SensorPresentationRegistry` consumes those structured fields and adds descriptive metadata before aliases and calculations are applied.
+
+The API exposes presentation as an optional additive object. Existing reading fields are unchanged. Alias display names take precedence over glossary names and receive `UserDefined` confidence, while the underlying raw label, description, documentation key, and device grouping remain available.
+
+Mappings live in a small typed registry until their size or update cadence justifies external data storage. Rules match structured source metadata; parsing stable IDs is prohibited. Unknown sensors remain visible with `Generic` confidence rather than receiving a guessed interpretation.
+
 ## Live update transport
 
 Live updates use Server-Sent Events at `/api/sensors/stream`. Telemetry flow is one-way, so WebSockets would add protocol and session complexity without a current requirement.

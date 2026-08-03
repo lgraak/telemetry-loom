@@ -6,12 +6,14 @@ The project is intentionally not an attempt to recreate HWiNFO. Its job is to si
 
 ## Current status
 
-Milestone 5 adds live sensor snapshots to the repository foundation, Linux hwmon discovery, durable aliases, and typed calculated sensors:
+Milestone 6.5 adds sensor presentation enrichment to the repository foundation, Linux hwmon discovery, durable aliases, typed calculated sensors, live snapshots, and the validated InfoPanel integration:
 
 - a structured sensor model with quantity, unit, availability, and timestamp metadata
 - a simulated Celsius temperature sensor with the stable ID `simulated:temperature:1`
 - read-only discovery of hwmon temperature, fan, voltage, current, power, frequency, and humidity channels
 - stable hwmon IDs based on the driver, normalized hardware path, sensor type, channel, and measurement
+- additive presentation metadata with documented names, descriptions, device grouping, metric categories, and interpretation confidence
+- seeded AMD CPU/GPU, Intel CPU/RAPL, NVMe, ACPI, and Intel Wi-Fi interpretations with safe generic fallback
 - fixture capture and replay without requiring contributor hardware
 - user-owned aliases with stable keys and separate display names
 - versioned JSON configuration with atomic replacement
@@ -26,7 +28,7 @@ Milestone 5 adds live sensor snapshots to the repository foundation, Linux hwmon
 - a minimal browser status page
 - automated unit tests and GitHub Actions CI
 
-NVML, unit conversion controls, and the browser configuration interface are not implemented yet. The first [InfoPanel plugin](https://github.com/lgraak/InfoPanel.TelemetryLoom) is implemented and validated on InfoPanel-linux.
+NVML, unit conversion controls, and the browser configuration interface are not implemented yet. The first [InfoPanel plugin](https://github.com/lgraak/InfoPanel.TelemetryLoom) is implemented and validated on InfoPanel-linux; enrichment-aware device grouping is the next validation slice.
 
 ## Architecture direction
 
@@ -34,13 +36,15 @@ NVML, unit conversion controls, and the browser configuration interface are not 
 hwmon / NVML / future collectors
               |
               v
-normalized sensors -> aliases -> calculated sensors -> local HTTP API
-                                                       |-> InfoPanel plugin
-                                                       |-> browser configuration
-                                                       `-> future local consumers
+normalized sensors -> presentation enrichment -> aliases -> calculated sensors -> local HTTP API
+                                                                            |-> InfoPanel plugin
+                                                                            |-> browser configuration
+                                                                            `-> future local consumers
 ```
 
 Units are structured data rather than arbitrary display strings. Calculated sensors require exact matching units and expose the same reading contract as collected sensors. User-selectable conversion is deliberately deferred, but the core model distinguishes absolute temperatures from temperature differences so it can be added safely. See [calculated sensor setup](docs/calculated-sensors.md) and the [formula semantics](docs/formula-semantics.md).
+
+Presentation is also structured and additive. It never participates in stable identity or numeric normalization. See the [sensor glossary](docs/sensor-glossary.md) and [sensor enrichment contribution guide](docs/contributing-sensor-enrichment.md).
 
 ## Requirements
 
@@ -110,6 +114,7 @@ See [docs/live-updates.md](docs/live-updates.md) for the Server-Sent Events snap
 4. unit-aware arithmetic formulas (complete; validated on CachyOS through tests and a live API/persistence exercise)
 5. live API updates (complete; Server-Sent Events snapshot stream)
 6. InfoPanel plugin (complete; REST polling validated through InfoPanel-linux on CachyOS)
+6.5. sensor presentation enrichment and InfoPanel device grouping (implemented; live validation pending)
 7. browser configuration interface
 8. installation documentation and systemd packaging
 
