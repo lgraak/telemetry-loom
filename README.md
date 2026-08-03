@@ -28,7 +28,7 @@ Milestone 6.5 adds sensor presentation enrichment to the repository foundation, 
 - a minimal browser status page
 - automated unit tests and GitHub Actions CI
 
-NVML, unit conversion controls, and the browser configuration interface are not implemented yet. The first [InfoPanel plugin](https://github.com/lgraak/InfoPanel.TelemetryLoom) is implemented and validated on InfoPanel-linux; enrichment-aware device grouping is the next validation slice.
+NVML, unit conversion controls, and the browser configuration interface are not implemented yet. The first [InfoPanel plugin](https://github.com/lgraak/InfoPanel.TelemetryLoom) and its enrichment-aware device grouping are implemented and validated on InfoPanel-linux.
 
 ## Architecture direction
 
@@ -114,7 +114,7 @@ See [docs/live-updates.md](docs/live-updates.md) for the Server-Sent Events snap
 4. unit-aware arithmetic formulas (complete; validated on CachyOS through tests and a live API/persistence exercise)
 5. live API updates (complete; Server-Sent Events snapshot stream)
 6. InfoPanel plugin (complete; REST polling validated through InfoPanel-linux on CachyOS)
-6.5. sensor presentation enrichment and InfoPanel device grouping (implemented; live validation pending)
+6.5. sensor presentation enrichment and InfoPanel device grouping (complete; live-validated on CachyOS)
 7. browser configuration interface
 8. installation documentation and systemd packaging
 
