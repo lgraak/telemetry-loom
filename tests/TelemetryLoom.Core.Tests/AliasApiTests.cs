@@ -114,6 +114,27 @@ public sealed class AliasApiTests : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, missingSensor.StatusCode);
     }
 
+    [Fact]
+    public void MalformedConfigurationPreventsStartupAndIdentifiesPreviousFile()
+    {
+        var configPath = Path.Combine(_root, "malformed-config.json");
+        var previousPath = $"{configPath}.previous";
+        File.WriteAllText(configPath, "{ malformed");
+        File.WriteAllText(previousPath, """{"schemaVersion":1,"aliases":[]}""");
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, configuration) =>
+                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["TelemetryLoom:ConfigPath"] = configPath,
+                    ["Hwmon:RootPath"] = Path.Combine(_root, "missing-hwmon")
+                })));
+
+        var exception = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
+
+        Assert.Contains(previousPath, exception.ToString(), StringComparison.Ordinal);
+        Assert.Contains("restored deliberately", exception.ToString(), StringComparison.Ordinal);
+    }
+
     public void Dispose()
     {
         _factory.Dispose();

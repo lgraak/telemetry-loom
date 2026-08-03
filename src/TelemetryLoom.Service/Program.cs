@@ -35,6 +35,7 @@ builder.Services.AddSingleton<SensorAliasRegistry>();
 builder.Services.AddSingleton<AliasedSensorCatalog>();
 
 var app = builder.Build();
+_ = app.Services.GetRequiredService<SensorAliasRegistry>();
 
 app.MapRazorPages();
 app.MapGet("/api/sensors", (AliasedSensorCatalog catalog) => catalog.GetSensors());
