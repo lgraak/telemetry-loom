@@ -26,7 +26,7 @@ Milestone 5 adds live sensor snapshots to the repository foundation, Linux hwmon
 - a minimal browser status page
 - automated unit tests and GitHub Actions CI
 
-NVML, unit conversion controls, the InfoPanel plugin, and the browser configuration interface are not implemented yet.
+NVML, unit conversion controls, and the browser configuration interface are not implemented yet. The first [InfoPanel plugin](https://github.com/lgraak/InfoPanel.TelemetryLoom) is implemented and validated on InfoPanel-linux.
 
 ## Architecture direction
 
@@ -78,7 +78,7 @@ Kestrel__Endpoints__Http__Url=http://127.0.0.1:5200 dotnet run --project src/Tel
 
 The service must remain localhost-only by default. Remote access and authentication are outside the initial scope.
 
-The HTTP API is pre-release and may change until the InfoPanel plugin becomes its first external consumer. Breaking changes must be deliberate and versioned after that point. See [docs/design-decisions.md](docs/design-decisions.md).
+The InfoPanel plugin is now the first external API consumer. Breaking changes must therefore be deliberate and versioned. See [docs/design-decisions.md](docs/design-decisions.md).
 
 ## Test
 
@@ -109,7 +109,7 @@ See [docs/live-updates.md](docs/live-updates.md) for the Server-Sent Events snap
 3. aliases and JSON configuration persistence (complete; validated against live CachyOS hwmon data and across a service restart)
 4. unit-aware arithmetic formulas (complete; validated on CachyOS through tests and a live API/persistence exercise)
 5. live API updates (complete; Server-Sent Events snapshot stream)
-6. InfoPanel plugin
+6. InfoPanel plugin (complete; REST polling validated through InfoPanel-linux on CachyOS)
 7. browser configuration interface
 8. installation documentation and systemd packaging
 
