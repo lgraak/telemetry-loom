@@ -74,6 +74,11 @@ public sealed class CalculatedSensorCatalog(
                         var sensor = byKey[key];
                         return new FormulaValue(sensor.Value!.Value, new FormulaType(sensor.Quantity, sensor.Unit));
                     });
+                    var configuredType = new FormulaType(definition.Quantity, definition.Unit);
+                    if (value.Type != configuredType)
+                        throw new FormulaException(
+                            $"Formula result type changed from {configuredType.Quantity}/{configuredType.Unit} " +
+                            $"to {value.Type.Quantity}/{value.Type.Unit}; update the definition after rebinding its dependencies");
                     var oldest = dependencies.Length == 0
                         ? evaluatedAt
                         : dependencies.Select(sensor => sensor.LastSuccessfulUpdate).Min();

@@ -67,6 +67,26 @@ public sealed class CalculatedSensorCatalogTests
         Assert.Equal(SensorStatus.MissingDependency, fixture.Catalog.GetSensorByAlias("value.one")!.Status);
     }
 
+    [Fact]
+    public void RebindingDependencyToDifferentUnitProducesCalculationError()
+    {
+        var power = new SensorReading(
+            "fixture:power", "Power", null, 100, QuantityKind.Power, UnitCode.Watts, "W",
+            "fixture", SensorStatus.Available, DateTimeOffset.Parse("2026-08-02T00:00:00Z"),
+            new Dictionary<string, string>());
+        var fixture = CreateFixture(
+            Reading("fixture:temperature", 20, SensorStatus.Available, "2026-08-02T00:00:00Z"),
+            power);
+        fixture.Aliases.Upsert("value.input", "Input", "fixture:temperature");
+        fixture.Calculations.Upsert("value.scaled", "Scaled", "value.input * 2");
+
+        fixture.Aliases.Upsert("value.input", "Input", "fixture:power");
+        var result = fixture.Catalog.GetSensorByAlias("value.scaled")!;
+
+        Assert.Equal(SensorStatus.CalculationError, result.Status);
+        Assert.Contains("result type changed", result.Metadata["error"], StringComparison.Ordinal);
+    }
+
     private static Fixture CreateFixture(params SensorReading[] readings)
     {
         var sensors = new SensorCatalog([new FixtureSource(readings)]);
