@@ -57,6 +57,7 @@ public sealed class BrowserPagesTests : IDisposable
 
         var response = await client.GetAsync("/sensors");
         var html = await response.Content.ReadAsStringAsync();
+        var renderedText = WebUtility.HtmlDecode(html);
         var script = await client.GetStringAsync("/js/sensors.js");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -68,8 +69,8 @@ public sealed class BrowserPagesTests : IDisposable
         Assert.Contains("Available", html, StringComparison.Ordinal);
         Assert.Contains("Stale", html, StringComparison.Ordinal);
         Assert.Contains("Unavailable", html, StringComparison.Ordinal);
-        Assert.Contains("—", html, StringComparison.Ordinal);
-        Assert.Contains("°C", html, StringComparison.Ordinal);
+        Assert.Contains("—", renderedText, StringComparison.Ordinal);
+        Assert.Contains("°C", renderedText, StringComparison.Ordinal);
         Assert.Contains("2026-08-07 12:00:00Z", html, StringComparison.Ordinal);
         Assert.Contains("&lt;script&gt;unsafe()&lt;/script&gt;", html, StringComparison.Ordinal);
         Assert.DoesNotContain("<script>unsafe()</script>", html, StringComparison.Ordinal);
