@@ -1,0 +1,42 @@
+@{
+    var activePage = ViewData["ActivePage"] as string;
+    var title = ViewData["Title"] as string;
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>@(string.IsNullOrWhiteSpace(title) ? "Telemetry Loom" : $"{title} · Telemetry Loom")</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+        <div class="header-inner">
+            <a class="brand" asp-page="/Index" aria-label="Telemetry Loom overview">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span>
+                    <strong>Telemetry Loom</strong>
+                    <small>Local sensor administration</small>
+                </span>
+            </a>
+            <nav class="site-nav" aria-label="Primary navigation">
+                <a asp-page="/Index" aria-current="@(activePage == "Overview" ? "page" : null)">Overview</a>
+                <a asp-page="/Sensors" aria-current="@(activePage == "Sensors" ? "page" : null)">Sensors</a>
+                <a asp-page="/Aliases" aria-current="@(activePage == "Aliases" ? "page" : null)">Aliases</a>
+                <a asp-page="/Calculations" aria-current="@(activePage == "Calculations" ? "page" : null)">Calculations</a>
+            </nav>
+        </div>
+    </header>
+    <main id="main-content" class="site-main">
+        @RenderBody()
+    </main>
+    <footer class="site-footer">
+        <span>Telemetry Loom</span>
+        <span>Localhost administration interface</span>
+    </footer>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

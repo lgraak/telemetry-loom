@@ -3,16 +3,53 @@ using TelemetryLoom.Contracts.Calculations;
 
 namespace TelemetryLoom.Core.Configuration;
 
-public sealed class TelemetryConfigurationRegistry(ITelemetryConfigurationStore store)
+public sealed class TelemetryConfigurationRegistry
 {
     private readonly object _gate = new();
-    private TelemetryConfigurationDocument _document = Clone(store.Load());
+    private readonly ITelemetryConfigurationStore _store;
+    private readonly ITelemetryConfigurationStoreMetadata? _storeMetadata;
+    private readonly TimeProvider _timeProvider;
+    private readonly DateTimeOffset _loadedAt;
+    private TelemetryConfigurationDocument _document;
+    private long _revision;
+    private DateTimeOffset? _lastSuccessfulSaveAt;
+
+    public TelemetryConfigurationRegistry(ITelemetryConfigurationStore store)
+        : this(store, TimeProvider.System)
+    {
+    }
+
+    public TelemetryConfigurationRegistry(
+        ITelemetryConfigurationStore store,
+        TimeProvider timeProvider)
+    {
+        _store = store;
+        _storeMetadata = store as ITelemetryConfigurationStoreMetadata;
+        _timeProvider = timeProvider;
+        _document = Clone(store.Load());
+        _loadedAt = timeProvider.GetUtcNow();
+    }
 
     public TelemetryConfigurationDocument GetSnapshot()
     {
         lock (_gate)
         {
             return Clone(_document);
+        }
+    }
+
+    public TelemetryConfigurationStatus GetStatus()
+    {
+        lock (_gate)
+        {
+            return new TelemetryConfigurationStatus(
+                _storeMetadata?.ActivePath ?? "Unavailable",
+                _document.SchemaVersion,
+                _loadedAt,
+                _revision,
+                _lastSuccessfulSaveAt,
+                _storeMetadata?.PreviousPath ?? "Unavailable",
+                _storeMetadata?.PreviousExists ?? false);
         }
     }
 
@@ -25,8 +62,9 @@ public sealed class TelemetryConfigurationRegistry(ITelemetryConfigurationStore 
                 Aliases = [.. aliases.OrderBy(alias => alias.Key, StringComparer.Ordinal)],
                 CalculatedSensors = [.. _document.CalculatedSensors]
             };
-            store.Save(next);
+            _store.Save(next);
             _document = Clone(next);
+            RecordSuccessfulSave();
         }
     }
 
@@ -39,9 +77,16 @@ public sealed class TelemetryConfigurationRegistry(ITelemetryConfigurationStore 
                 Aliases = [.. _document.Aliases],
                 CalculatedSensors = [.. calculatedSensors.OrderBy(sensor => sensor.Key, StringComparer.Ordinal)]
             };
-            store.Save(next);
+            _store.Save(next);
             _document = Clone(next);
+            RecordSuccessfulSave();
         }
+    }
+
+    private void RecordSuccessfulSave()
+    {
+        _revision++;
+        _lastSuccessfulSaveAt = _timeProvider.GetUtcNow();
     }
 
     private static TelemetryConfigurationDocument Clone(TelemetryConfigurationDocument document) =>
