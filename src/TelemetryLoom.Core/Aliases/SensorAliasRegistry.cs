@@ -64,6 +64,25 @@ public sealed partial class SensorAliasRegistry
 
     public ResolvedSensorAlias Upsert(string key, string displayName, string sensorId)
     {
+        return UpsertCore(key, displayName, sensorId, null);
+    }
+
+    public ResolvedSensorAlias Upsert(
+        string key,
+        string displayName,
+        string sensorId,
+        long expectedRevision)
+    {
+        _configuration.EnsureRevision(expectedRevision);
+        return UpsertCore(key, displayName, sensorId, expectedRevision);
+    }
+
+    private ResolvedSensorAlias UpsertCore(
+        string key,
+        string displayName,
+        string sensorId,
+        long? expectedRevision)
+    {
         ValidateKey(key);
         var normalizedDisplayName = ValidateDisplayName(displayName);
         var normalizedSensorId = ValidateSensorId(sensorId);
@@ -107,13 +126,32 @@ public sealed partial class SensorAliasRegistry
                 .OrderBy(alias => alias.Key, StringComparer.Ordinal)
                 .ToArray();
 
-            _configuration.UpdateAliases(next);
+            if (expectedRevision is { } revision)
+            {
+                _configuration.UpdateAliases(next, revision);
+            }
+            else
+            {
+                _configuration.UpdateAliases(next);
+            }
+
             _aliases = next;
             return ToResolved(definition, sensor?.Status ?? SensorStatus.Unavailable);
         }
     }
 
     public bool Delete(string key)
+    {
+        return DeleteCore(key, null);
+    }
+
+    public bool Delete(string key, long expectedRevision)
+    {
+        _configuration.EnsureRevision(expectedRevision);
+        return DeleteCore(key, expectedRevision);
+    }
+
+    private bool DeleteCore(string key, long? expectedRevision)
     {
         lock (_gate)
         {
@@ -125,7 +163,15 @@ public sealed partial class SensorAliasRegistry
                 return false;
             }
 
-            _configuration.UpdateAliases(next);
+            if (expectedRevision is { } revision)
+            {
+                _configuration.UpdateAliases(next, revision);
+            }
+            else
+            {
+                _configuration.UpdateAliases(next);
+            }
+
             _aliases = next;
             return true;
         }

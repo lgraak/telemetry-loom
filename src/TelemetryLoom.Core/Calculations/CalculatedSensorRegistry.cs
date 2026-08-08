@@ -32,6 +32,21 @@ public sealed partial class CalculatedSensorRegistry
     public CalculatedSensorDefinition? GetDefinition(string key) => GetDefinitions()
         .FirstOrDefault(definition => string.Equals(definition.Key, key, StringComparison.Ordinal));
 
+    public IReadOnlyList<CalculatedSensorDefinition> GetDirectDependents(string key)
+    {
+        lock (_gate)
+        {
+            return
+            [
+                .. _definitions
+                    .Where(definition => FormulaEngine
+                        .GetDependencies(FormulaEngine.Parse(definition.Formula))
+                        .Contains(key, StringComparer.Ordinal))
+                    .OrderBy(definition => definition.Key, StringComparer.Ordinal)
+            ];
+        }
+    }
+
     public CalculatedSensorDefinition Upsert(string key, string displayName, string formula)
     {
         ValidateKey(key);

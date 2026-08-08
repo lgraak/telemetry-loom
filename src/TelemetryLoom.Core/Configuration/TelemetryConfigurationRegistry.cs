@@ -53,10 +53,37 @@ public sealed class TelemetryConfigurationRegistry
         }
     }
 
-    public void UpdateAliases(IReadOnlyCollection<SensorAliasDefinition> aliases)
+    public void EnsureRevision(long expectedRevision)
     {
         lock (_gate)
         {
+            EnsureRevisionCore(expectedRevision);
+        }
+    }
+
+    public void UpdateAliases(IReadOnlyCollection<SensorAliasDefinition> aliases)
+    {
+        UpdateAliasesCore(aliases, null);
+    }
+
+    public void UpdateAliases(
+        IReadOnlyCollection<SensorAliasDefinition> aliases,
+        long expectedRevision)
+    {
+        UpdateAliasesCore(aliases, expectedRevision);
+    }
+
+    private void UpdateAliasesCore(
+        IReadOnlyCollection<SensorAliasDefinition> aliases,
+        long? expectedRevision)
+    {
+        lock (_gate)
+        {
+            if (expectedRevision is { } revision)
+            {
+                EnsureRevisionCore(revision);
+            }
+
             var next = _document with
             {
                 Aliases = [.. aliases.OrderBy(alias => alias.Key, StringComparer.Ordinal)],
@@ -80,6 +107,14 @@ public sealed class TelemetryConfigurationRegistry
             _store.Save(next);
             _document = Clone(next);
             RecordSuccessfulSave();
+        }
+    }
+
+    private void EnsureRevisionCore(long expectedRevision)
+    {
+        if (_revision != expectedRevision)
+        {
+            throw new ConfigurationRevisionConflictException(expectedRevision, _revision);
         }
     }
 
