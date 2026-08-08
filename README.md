@@ -1,123 +1,75 @@
 # Telemetry Loom
 
-Telemetry Loom is a small local Linux service that normalizes hardware sensor data, assigns durable aliases, and produces calculated sensors for consumers such as InfoPanel.
+Telemetry Loom is a localhost-only Linux service that turns hardware sensor data into stable, typed telemetry for browser users and consumers such as [InfoPanel](https://github.com/lgraak/InfoPanel.TelemetryLoom).
 
-The project is intentionally not an attempt to recreate HWiNFO. Its job is to sit between disparate sensor sources and applications that need stable, understandable values.
+It provides:
 
-## Current status
+- read-only Linux hwmon discovery with stable physical sensor IDs
+- presentation enrichment for common CPU, GPU, NVMe, ACPI, and Wi-Fi sensors
+- durable aliases and typed calculated sensors
+- atomic JSON configuration with retained `.previous` content
+- REST APIs and complete-snapshot Server-Sent Events
+- responsive browser workflows for inspecting sensors and managing aliases and formulas
+- self-contained `linux-x64` and `linux-arm64` release packages with systemd installation
 
-Milestone 6.5 adds sensor presentation enrichment to the repository foundation, Linux hwmon discovery, durable aliases, typed calculated sensors, live snapshots, and the validated InfoPanel integration:
+## Install a release
 
-- a structured sensor model with quantity, unit, availability, and timestamp metadata
-- a simulated Celsius temperature sensor with the stable ID `simulated:temperature:1`
-- read-only discovery of hwmon temperature, fan, voltage, current, power, frequency, and humidity channels
-- stable hwmon IDs based on the driver, normalized hardware path, sensor type, channel, and measurement
-- additive presentation metadata with documented names, descriptions, device grouping, metric categories, and interpretation confidence
-- seeded AMD CPU/GPU, Intel CPU/RAPL, NVMe, ACPI, and Intel Wi-Fi interpretations with safe generic fallback
-- fixture capture and replay without requiring contributor hardware
-- user-owned aliases with stable keys and separate display names
-- versioned JSON configuration with atomic replacement
-- unavailable alias preservation when bound hardware is missing
-- localhost alias management and resolution APIs
-- parsed and dimension-checked arithmetic formulas over aliases
-- calculated-sensor dependency chains with cycle rejection
-- explicit missing, unavailable, stale, and calculation-error propagation
-- calculated readings through the same sensor API as collected readings
-- versioned Server-Sent Events snapshots with configurable cadence
-- a localhost HTTP API
-- a minimal browser status page
-- automated unit tests and GitHub Actions CI
-
-NVML, unit conversion controls, and the browser configuration interface are not implemented yet. The first [InfoPanel plugin](https://github.com/lgraak/InfoPanel.TelemetryLoom) and its enrichment-aware device grouping are implemented and validated on InfoPanel-linux.
-
-## Architecture direction
-
-```text
-hwmon / NVML / future collectors
-              |
-              v
-normalized sensors -> presentation enrichment -> aliases -> calculated sensors -> local HTTP API
-                                                                            |-> InfoPanel plugin
-                                                                            |-> browser configuration
-                                                                            `-> future local consumers
-```
-
-Units are structured data rather than arbitrary display strings. Calculated sensors require exact matching units and expose the same reading contract as collected sensors. User-selectable conversion is deliberately deferred, but the core model distinguishes absolute temperatures from temperature differences so it can be added safely. See [calculated sensor setup](docs/calculated-sensors.md) and the [formula semantics](docs/formula-semantics.md).
-
-Presentation is also structured and additive. It never participates in stable identity or numeric normalization. See the [sensor glossary](docs/sensor-glossary.md) and [sensor enrichment contribution guide](docs/contributing-sensor-enrichment.md).
-
-## Requirements
-
-- .NET 10 SDK for the complete solution
-- Linux is the runtime target; development and tests also work on Windows
-
-On Arch Linux and derivatives, install the SDK plus the separately packaged ASP.NET Core targeting and runtime packs:
+Normal users do not need the .NET SDK or ASP.NET Core runtime. Download the archive for your architecture from [GitHub Releases](https://github.com/lgraak/telemetry-loom/releases), then run:
 
 ```bash
-sudo pacman -Syu dotnet-sdk-10.0 aspnet-targeting-pack-10.0 aspnet-runtime-10.0
+tar -xzf telemetry-loom-<version>-linux-x64.tar.gz
+cd telemetry-loom-<version>-linux-x64
+sudo ./install.sh --start
+systemctl status telemetry-loom
 ```
 
-## Run the current milestone
+Use the `linux-arm64` archive on 64-bit ARM systems. Open `http://127.0.0.1:5198` on the installed machine. The service remains bound to localhost.
+
+See [the installation guide](docs/installation.md) for native dependencies, upgrades, logs, configuration, uninstall, and troubleshooting.
+
+## Build from source
+
+Source builds require the .NET 10 SDK:
 
 ```bash
 dotnet restore TelemetryLoom.slnx
+dotnet build TelemetryLoom.slnx --configuration Release --no-restore
+dotnet test TelemetryLoom.slnx --configuration Release --no-build
 dotnet run --project src/TelemetryLoom.Service
 ```
 
-Open `http://127.0.0.1:5198` or query:
+Current package-manager paths are:
 
-```bash
-curl http://127.0.0.1:5198/api/sensors
-curl http://127.0.0.1:5198/api/status
-curl http://127.0.0.1:5198/api/aliases
-curl http://127.0.0.1:5198/api/calculations
-curl -N http://127.0.0.1:5198/api/sensors/stream
+- Debian 12/13: Microsoft repository, then `sudo apt-get install dotnet-sdk-10.0`
+- Ubuntu 22.04/24.04/26.04: supported Ubuntu feed, then `sudo apt-get install dotnet-sdk-10.0`
+- Fedora 43/44, RHEL 8–10, CentOS Stream 9/10: `sudo dnf install dotnet-sdk-10.0`
+- Arch Linux, CachyOS, EndeavourOS: `sudo pacman -Syu dotnet-sdk-10.0 aspnet-targeting-pack-10.0`
+- openSUSE Leap 16: Microsoft repository, then `sudo zypper install dotnet-sdk-10.0`
+
+Exact repository setup and upstream references are in [docs/installation.md](docs/installation.md#build-from-source).
+
+## Interfaces
+
+The browser UI is at `http://127.0.0.1:5198`. Useful endpoints include:
+
+```text
+GET /api/status
+GET /api/sensors
+GET /api/sensors/stream
+GET /api/aliases
+GET /api/calculations
 ```
 
-Override the local listen address with ASP.NET Core Kestrel configuration, for example:
+Public behavior is documented in:
 
-```bash
-Kestrel__Endpoints__Http__Url=http://127.0.0.1:5200 dotnet run --project src/TelemetryLoom.Service
-```
+- [aliases](docs/aliases.md)
+- [calculated sensors](docs/calculated-sensors.md) and [formula semantics](docs/formula-semantics.md)
+- [live updates](docs/live-updates.md)
+- [sensor glossary](docs/sensor-glossary.md)
+- [design decisions](docs/design-decisions.md)
 
-The service must remain localhost-only by default. Remote access and authentication are outside the initial scope.
+## Project status
 
-The InfoPanel plugin is now the first external API consumer. Breaking changes must therefore be deliberate and versioned. See [docs/design-decisions.md](docs/design-decisions.md).
-
-## Test
-
-```bash
-dotnet test TelemetryLoom.slnx
-```
-
-## Capture an hwmon fixture
-
-On the Linux machine whose sensors you want to test:
-
-```bash
-dotnet run --project src/TelemetryLoom.Hwmon.Capture -- hwmon-fixture.json
-```
-
-The command reads only standard hwmon identity, input, average, label, and fault attributes. Review the JSON before sharing it. See [docs/hwmon-fixtures.md](docs/hwmon-fixtures.md) for the captured fields and current limitations.
-
-See [docs/aliases.md](docs/aliases.md) for alias naming, API operations, configuration paths, and missing-hardware behavior.
-
-See [docs/calculated-sensors.md](docs/calculated-sensors.md) for calculated-sensor setup and [docs/formula-semantics.md](docs/formula-semantics.md) for the exact language, dimensional, and status rules.
-
-See [docs/live-updates.md](docs/live-updates.md) for the Server-Sent Events snapshot contract, cadence configuration, and reconnect behavior.
-
-## Planned milestones
-
-1. Repository foundation and simulated sensor (complete)
-2. hwmon discovery and stable sensor identity (complete; validated on CachyOS with AMD CPU/GPU, NVMe, ACPI, and Intel Wi-Fi sensors)
-3. aliases and JSON configuration persistence (complete; validated against live CachyOS hwmon data and across a service restart)
-4. unit-aware arithmetic formulas (complete; validated on CachyOS through tests and a live API/persistence exercise)
-5. live API updates (complete; Server-Sent Events snapshot stream)
-6. InfoPanel plugin (complete; REST polling validated through InfoPanel-linux on CachyOS)
-6.5. sensor presentation enrichment and InfoPanel device grouping (complete; live-validated on CachyOS)
-7. browser configuration interface
-8. installation documentation and systemd packaging
-
-## License
+Milestones 1 through 7 are complete. Milestone 8 adds self-contained Linux release packaging, systemd deployment, lifecycle documentation, and installation validation. NVML, history, alerts, authentication, TLS, and remote administration remain outside the current scope.
 
 Telemetry Loom is licensed under GPL-3.0. See [LICENSE](LICENSE).

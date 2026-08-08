@@ -1,0 +1,56 @@
+name: Release packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version used in archive names, for example 0.8.0-rc.1
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore TelemetryLoom.slnx
+      - run: dotnet format TelemetryLoom.slnx --verify-no-changes --no-restore
+      - run: dotnet build TelemetryLoom.slnx --configuration Release --no-restore
+      - run: dotnet test TelemetryLoom.slnx --configuration Release --no-build --no-restore
+      - run: bash -n scripts/install.sh scripts/package-release.sh scripts/validate-release-archive.sh
+      - name: Verify systemd unit
+        run: |
+          getent group telemetry-loom >/dev/null || sudo groupadd --system telemetry-loom
+          getent passwd telemetry-loom >/dev/null || sudo useradd --system --gid telemetry-loom --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin telemetry-loom
+          sudo install -d -m 0755 /opt/telemetry-loom
+          sudo install -m 0755 /bin/true /opt/telemetry-loom/TelemetryLoom.Service
+          systemd-analyze verify packaging/telemetry-loom.service
+
+  package:
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [linux-x64, linux-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: ./scripts/package-release.sh "$PACKAGE_VERSION" "$PACKAGE_RID" dist
+        env:
+          PACKAGE_VERSION: ${{ inputs.version }}
+          PACKAGE_RID: ${{ matrix.rid }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: telemetry-loom-${{ inputs.version }}-${{ matrix.rid }}
+          path: dist/telemetry-loom-${{ inputs.version }}-${{ matrix.rid }}.tar.gz
+          if-no-files-found: error
+          retention-days: 14
