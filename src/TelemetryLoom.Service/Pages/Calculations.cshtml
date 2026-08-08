@@ -1,4 +1,5 @@
-@page "/calculations"
+@page "/calculations/{key?}"
+@model CalculationsModel
 @{
     ViewData["Title"] = "Calculations";
     ViewData["ActivePage"] = "Calculations";
@@ -6,13 +7,218 @@
 
 <section class="page-heading">
     <div>
-        <p class="eyebrow">Milestone 7</p>
+        <p class="eyebrow">Typed formula sensors</p>
         <h1>Calculated sensors</h1>
-        <p class="lede">Calculated-sensor editing is intentionally not implemented in Slice 7A.</p>
+        <p class="lede">Create and validate typed formulas over aliases and calculated-sensor keys without changing the existing formula language.</p>
     </div>
+    <a class="button button-link" asp-page="/Calculations" asp-route-key="">Create calculation</a>
 </section>
 
-<section class="empty-panel">
-    <h2>The current formula contract remains active</h2>
-    <p>This navigation destination is reserved for the approved calculation workflow. Existing calculation REST APIs and formula behavior are unchanged.</p>
-</section>
+@if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+{
+    <div class="notice notice-success" role="status">@Model.SuccessMessage</div>
+}
+
+<div class="calculation-workspace">
+    <section class="panel calculation-list-panel">
+        <div class="panel-heading">
+            <div>
+                <p class="eyebrow">Configured</p>
+                <h2>@Model.CalculationList.Count calculation@(Model.CalculationList.Count == 1 ? string.Empty : "s")</h2>
+            </div>
+            <span class="revision-label">Revision @Model.Configuration.Revision</span>
+        </div>
+        @if (Model.CalculationList.Count == 0)
+        {
+            <p class="empty-state">No calculated sensors are configured.</p>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="calculation-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Calculation</th>
+                            <th scope="col">Formula</th>
+                            <th scope="col">Status</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.CalculationList)
+                        {
+                            <tr>
+                                <td><strong>@item.Definition.DisplayName</strong><code>@item.Definition.Key</code></td>
+                                <td><code>@item.Definition.Formula</code><span class="sensor-subtitle">@item.Definition.Quantity · @item.Reading.UnitSymbol</span></td>
+                                <td><span class="status-badge status-@item.Reading.Status.ToString().ToLowerInvariant()">@item.Reading.Status</span></td>
+                                <td><a asp-page="/Calculations" asp-route-key="@item.Definition.Key">Edit</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <section class="panel calculation-editor">
+        <p class="eyebrow">@(Model.IsEditing ? "Edit calculation" : "Create calculation")</p>
+        <h2>@(Model.IsEditing ? Model.CurrentDefinition!.DisplayName : "New calculated sensor")</h2>
+        <form method="post" asp-route-key="@(Model.IsEditing ? Model.CurrentDefinition!.Key : null)">
+            <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+            <input asp-for="Input.Revision" type="hidden" />
+            <span asp-validation-for="Input.Revision" class="field-error"></span>
+
+            @if (Model.IsEditing)
+            {
+                <label>
+                    <span>Calculated sensor key</span>
+                    <code class="immutable-value">@Model.Input.Key</code>
+                    <input asp-for="Input.Key" type="hidden" />
+                    <span class="field-note">Keys are immutable and remain stable formula operands.</span>
+                </label>
+            }
+            else
+            {
+                <label>
+                    <span>Calculated sensor key</span>
+                    <input asp-for="Input.Key" autocomplete="off" placeholder="temperature.delta" />
+                    <span asp-validation-for="Input.Key" class="field-error"></span>
+                </label>
+            }
+
+            <label>
+                <span>Display name</span>
+                <input asp-for="Input.DisplayName" autocomplete="off" />
+                <span asp-validation-for="Input.DisplayName" class="field-error"></span>
+            </label>
+
+            <label>
+                <span>Formula</span>
+                <textarea asp-for="Input.Formula" rows="7" data-formula-input spellcheck="false"></textarea>
+                <span asp-validation-for="Input.Formula" class="field-error"></span>
+                <span class="field-note">Aliases, calculated keys, invariant decimal scalars, parentheses, unary minus, and + − × ÷ only.</span>
+            </label>
+
+            <div class="button-row">
+                <button class="button button-secondary" type="submit" asp-page-handler="Validate">Validate without saving</button>
+                <button class="button" type="submit" asp-page-handler="Save">@(Model.IsEditing ? "Save calculation" : "Create calculation")</button>
+            </div>
+        </form>
+
+        @if (Model.Validation is not null)
+        {
+            <section class="validation-result" aria-live="polite">
+                <p class="eyebrow">Validation passed · no write performed</p>
+                <h3>Inferred @Model.Validation.Quantity @Model.Validation.UnitSymbol</h3>
+                <p><code>@Model.Validation.Unit</code></p>
+                @if (Model.Validation.Dependencies.Count == 0)
+                {
+                    <p>This scalar formula has no dependencies.</p>
+                }
+                else
+                {
+                    <h4>Ordered dependencies</h4>
+                    <ol class="dependency-list">
+                        @foreach (var dependency in Model.Validation.Dependencies)
+                        {
+                            <li>
+                                <code>@dependency.Key</code>
+                                <span>@dependency.DisplayName · @dependency.Quantity @dependency.UnitSymbol</span>
+                                <span class="status-badge status-@dependency.Status.ToString().ToLowerInvariant()">@dependency.Status</span>
+                                @if (dependency.Status != TelemetryLoom.Contracts.Sensors.SensorStatus.Available)
+                                {
+                                    <strong class="dependency-warning">Current dependency state may block a reading.</strong>
+                                }
+                            </li>
+                        }
+                    </ol>
+                }
+            </section>
+        }
+
+        @if (Model.CurrentReading is not null)
+        {
+            <section class="calculation-result">
+                <div class="panel-heading">
+                    <h3>Authoritative reading</h3>
+                    <span class="status-badge status-@Model.CurrentReading.Status.ToString().ToLowerInvariant()">@Model.CurrentReading.Status</span>
+                </div>
+                @if (Model.CurrentReading.Status == TelemetryLoom.Contracts.Sensors.SensorStatus.Available && Model.CurrentReading.Value is { } value)
+                {
+                    <p class="calculation-value">@value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) @Model.CurrentReading.UnitSymbol</p>
+                    @if (Model.CurrentReading.LastSuccessfulUpdate is { } updatedAt)
+                    {
+                        <p>Last successful update: <time datetime="@updatedAt.ToString("O")">@updatedAt.ToString("u")</time></p>
+                    }
+                }
+                else
+                {
+                    <p>No current value is available.</p>
+                }
+                @if (Model.CurrentReading.Metadata.TryGetValue("error", out var error))
+                {
+                    <p class="field-error">@error</p>
+                }
+            </section>
+        }
+
+        <section class="operand-reference">
+            <h3>Operand reference</h3>
+            <p>Select an operand to insert its key at the formula cursor.</p>
+            @if (Model.Operands.Count == 0)
+            {
+                <p class="empty-state">Configure an alias before creating a sensor-dependent formula.</p>
+            }
+            else
+            {
+                <ul class="operand-list">
+                    @foreach (var operand in Model.Operands)
+                    {
+                        <li>
+                            <button type="button" class="operand-button" data-insert-operand="@operand.Key"><code>@operand.Key</code></button>
+                            <span>@operand.DisplayName · @operand.Origin · @operand.Quantity @operand.UnitSymbol</span>
+                            <span class="status-badge status-@operand.Status.ToString().ToLowerInvariant()">@operand.Status</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        @if (Model.IsEditing)
+        {
+            <section class="delete-panel">
+                <h3>Delete calculated sensor</h3>
+                <p>Deletion does not cascade. Dependent calculations remain configured and will report <code>MissingDependency</code>.</p>
+                @if (Model.DirectDependents.Count > 0)
+                {
+                    <p>Direct calculated dependents:</p>
+                    <ul>
+                        @foreach (var dependent in Model.DirectDependents)
+                        {
+                            <li><strong>@dependent.DisplayName</strong> <code>@dependent.Key</code></li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p>No calculated sensors directly depend on this calculation.</p>
+                }
+                <form method="post" asp-page-handler="Delete" asp-route-key="@Model.CurrentDefinition!.Key">
+                    <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+                    <input asp-for="Input.Revision" type="hidden" />
+                    <span asp-validation-for="Input.Revision" class="field-error"></span>
+                    <label class="confirmation-field">
+                        <input asp-for="ConfirmDelete" />
+                        <span>I understand deletion is non-cascading and want to delete this calculated sensor.</span>
+                    </label>
+                    <span asp-validation-for="ConfirmDelete" class="field-error"></span>
+                    <button class="button button-danger" type="submit">Delete calculated sensor</button>
+                </form>
+            </section>
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/calculations.js" asp-append-version="true"></script>
+}

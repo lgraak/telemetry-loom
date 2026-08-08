@@ -152,20 +152,24 @@ public sealed class AliasApiTests : IDisposable
     public async Task CreatesEvaluatesAndDeletesCalculatedSensorOverHttp()
     {
         using var client = _factory.CreateClient();
+        var configuration = _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>();
         Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync(
             "/api/aliases/temperature.input",
             new { displayName = "Input Temperature", sensorId = SimulatedSensorSource.TemperatureSensorId })).StatusCode);
+        Assert.Equal(1, configuration.GetStatus().Revision);
 
         var created = await client.PutAsJsonAsync(
             "/api/calculations/temperature.offset",
             new { displayName = "Adjusted Temperature", formula = "temperature.input + 5" });
 
         Assert.Equal(HttpStatusCode.BadRequest, created.StatusCode);
+        Assert.Equal(1, configuration.GetStatus().Revision);
 
         var scaled = await client.PutAsJsonAsync(
             "/api/calculations/temperature.scaled",
             new { displayName = "Scaled Temperature", formula = "temperature.input * 2" });
         Assert.Equal(HttpStatusCode.OK, scaled.StatusCode);
+        Assert.Equal(2, configuration.GetStatus().Revision);
 
         using var result = JsonDocument.Parse(
             await client.GetStringAsync("/api/sensors/by-alias/temperature.scaled"));
@@ -175,6 +179,7 @@ public sealed class AliasApiTests : IDisposable
 
         Assert.Equal(HttpStatusCode.NoContent,
             (await client.DeleteAsync("/api/calculations/temperature.scaled")).StatusCode);
+        Assert.Equal(3, configuration.GetStatus().Revision);
         Assert.Equal(HttpStatusCode.NotFound,
             (await client.GetAsync("/api/sensors/by-alias/temperature.scaled")).StatusCode);
     }

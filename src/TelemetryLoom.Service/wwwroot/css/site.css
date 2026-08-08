@@ -75,6 +75,7 @@ a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 summary:focus-visible {
     outline: 3px solid var(--focus);
     outline-offset: 2px;
@@ -277,6 +278,25 @@ h2 {
     min-width: 0;
 }
 
+.calculation-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(24rem, 0.95fr);
+    align-items: start;
+    gap: 1rem;
+}
+
+.calculation-workspace > * {
+    min-width: 0;
+}
+
+.calculation-workspace .panel {
+    margin-top: 0;
+}
+
+.calculation-list-panel {
+    overflow: hidden;
+}
+
 .alias-workspace .panel {
     margin-top: 0;
 }
@@ -294,6 +314,22 @@ h2 {
 .alias-editor form {
     gap: 1rem;
     margin-top: 1.2rem;
+}
+
+.calculation-editor > form,
+.calculation-editor > form > label {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.calculation-editor > form {
+    gap: 1rem;
+    margin-top: 1.2rem;
+}
+
+.calculation-editor label > span:first-child {
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
 .alias-editor label > span:first-child,
@@ -356,6 +392,112 @@ h2 {
     width: 100%;
     min-width: 42rem;
     border-collapse: collapse;
+}
+
+.calculation-table {
+    width: 100%;
+    min-width: 46rem;
+    border-collapse: collapse;
+}
+
+.calculation-table th,
+.calculation-table td {
+    padding: 0.8rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+}
+
+.calculation-table th {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+}
+
+.calculation-table td code {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.76rem;
+}
+
+textarea {
+    width: 100%;
+    min-height: 10rem;
+    resize: vertical;
+    padding: 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text);
+    background: var(--surface-muted);
+    font: 0.9rem/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+}
+
+.button-row .button {
+    flex: 1 1 12rem;
+}
+
+.button-secondary {
+    color: var(--text);
+    background: var(--surface-muted);
+}
+
+.validation-result,
+.calculation-result,
+.operand-reference {
+    margin-top: 1.4rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    background: var(--surface-muted);
+}
+
+.validation-result h3,
+.calculation-result h3,
+.operand-reference h3 {
+    margin-top: 0;
+}
+
+.calculation-value {
+    margin-bottom: 0.4rem;
+    font-size: 1.8rem;
+    font-weight: 750;
+}
+
+.dependency-list,
+.operand-list {
+    display: grid;
+    gap: 0.65rem;
+    padding-left: 1.25rem;
+}
+
+.dependency-list li,
+.operand-list li {
+    display: grid;
+    grid-template-columns: minmax(9rem, auto) 1fr auto;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.dependency-warning {
+    grid-column: 1 / -1;
+    color: var(--warning);
+    font-size: 0.78rem;
+}
+
+.operand-button {
+    width: fit-content;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    color: var(--accent);
+    background: var(--surface);
+    cursor: pointer;
 }
 
 .alias-table th,
@@ -738,6 +880,10 @@ select {
         grid-template-columns: 1fr;
     }
 
+    .calculation-workspace {
+        grid-template-columns: 1fr;
+    }
+
     .filter-panel {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
@@ -814,6 +960,39 @@ select {
     .alias-table td {
         padding: 0.35rem 0.8rem;
         border-bottom: 0;
+    }
+
+    .calculation-table {
+        min-width: 0;
+    }
+
+    .calculation-table thead {
+        display: none;
+    }
+
+    .calculation-table tbody,
+    .calculation-table tr,
+    .calculation-table td {
+        display: block;
+    }
+
+    .calculation-table tr {
+        padding-block: 0.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .calculation-table tr:last-child {
+        border-bottom: 0;
+    }
+
+    .calculation-table td {
+        padding: 0.35rem 0.8rem;
+        border-bottom: 0;
+    }
+
+    .dependency-list li,
+    .operand-list li {
+        grid-template-columns: 1fr;
     }
 }
 
