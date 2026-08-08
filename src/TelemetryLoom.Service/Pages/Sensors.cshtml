@@ -140,7 +140,12 @@
                                 </td>
                                 <td>
                                     <span>@reading.Origin · @reading.Source</span>
-                                    @if (!string.IsNullOrWhiteSpace(reading.Alias))
+                                    @if (reading.Origin == "Calculated")
+                                    {
+                                        <code class="alias-key">@reading.Alias</code>
+                                        <a class="sensor-action" asp-page="/Calculations" asp-route-key="@reading.Alias">Manage calculation</a>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(reading.Alias))
                                     {
                                         <code class="alias-key">@reading.Alias</code>
                                         <a class="sensor-action" asp-page="/Aliases" asp-route-key="@reading.Alias">Manage alias</a>

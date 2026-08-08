@@ -163,7 +163,12 @@
 
         const contextCell = document.createElement("td");
         contextCell.append(element("span", null, `${reading.origin} · ${reading.source}`));
-        if (reading.alias) {
+        if (reading.origin === "Calculated") {
+            contextCell.append(element("code", "alias-key", reading.alias));
+            const manageLink = element("a", "sensor-action", "Manage calculation");
+            manageLink.href = `/calculations/${encodeURIComponent(reading.alias)}`;
+            contextCell.append(manageLink);
+        } else if (reading.alias) {
             contextCell.append(element("code", "alias-key", reading.alias));
             const manageLink = element("a", "sensor-action", "Manage alias");
             manageLink.href = `/aliases/${encodeURIComponent(reading.alias)}`;

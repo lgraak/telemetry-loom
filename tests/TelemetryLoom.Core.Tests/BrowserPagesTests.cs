@@ -9,6 +9,7 @@ using TelemetryLoom.Contracts.Aliases;
 using TelemetryLoom.Contracts.Calculations;
 using TelemetryLoom.Contracts.Sensors;
 using TelemetryLoom.Core.Aliases;
+using TelemetryLoom.Core.Calculations;
 using TelemetryLoom.Core.Configuration;
 using TelemetryLoom.Core.Sensors;
 
@@ -379,6 +380,355 @@ public sealed class BrowserPagesTests : IDisposable
     }
 
     [Fact]
+    public async Task CalculationValidateDoesNotWriteAndCreateUsesPostRedirectGet()
+    {
+        SaveConfiguration(new SensorAliasDefinition(
+            "temperature.gpu.edge", "GPU Edge", "browser-fixture:gpu:edge",
+            QuantityKind.Temperature, UnitCode.Celsius, "hwmon"));
+        using var client = CreateNoRedirectClient();
+        var fileBefore = File.ReadAllText(_configPath);
+        var token = await GetAntiforgeryToken(client, "/calculations");
+        var values = new Dictionary<string, string>
+        {
+            ["Input.Key"] = "temperature.gpu.scaled",
+            ["Input.DisplayName"] = "<script>Scaled GPU</script>",
+            ["Input.Formula"] = "temperature.gpu.edge * 2",
+            ["Input.Revision"] = "0"
+        };
+
+        var validationResponse = await PostForm(
+            client, "/calculations?handler=Validate", token, values);
+        var validationHtml = await validationResponse.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, validationResponse.StatusCode);
+        Assert.Contains("Validation passed", validationHtml, StringComparison.Ordinal);
+        Assert.Contains("Inferred Temperature", validationHtml, StringComparison.Ordinal);
+        Assert.Contains("temperature.gpu.edge", validationHtml, StringComparison.Ordinal);
+        Assert.Equal(fileBefore, File.ReadAllText(_configPath));
+        Assert.Empty(_factory.Services.GetRequiredService<CalculatedSensorRegistry>().GetDefinitions());
+        Assert.Equal(0, _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>().GetStatus().Revision);
+        Assert.False(File.Exists($"{_configPath}.previous"));
+
+        token = GetAntiforgeryToken(validationHtml);
+        var savedResponse = await PostForm(
+            client, "/calculations?handler=Save", token, values);
+
+        Assert.Equal(HttpStatusCode.Redirect, savedResponse.StatusCode);
+        Assert.Equal("/calculations/temperature.gpu.scaled", savedResponse.Headers.Location?.OriginalString);
+        var savedHtml = await client.GetStringAsync(savedResponse.Headers.Location);
+        Assert.Contains("Saved calculated sensor", savedHtml, StringComparison.Ordinal);
+        Assert.Contains("Status: Available", savedHtml, StringComparison.Ordinal);
+        Assert.Contains("84 °C", WebUtility.HtmlDecode(savedHtml), StringComparison.Ordinal);
+        Assert.Contains("&lt;script&gt;Scaled GPU&lt;/script&gt;", savedHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("<script>Scaled GPU</script>", savedHtml, StringComparison.Ordinal);
+        Assert.Equal(1, _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>().GetStatus().Revision);
+    }
+
+    [Fact]
+    public async Task CalculationEditPreservesImmutableKeyAndSavesFormulaChanges()
+    {
+        SaveConfiguration(
+            new SensorAliasDefinition(
+                "temperature.gpu.edge", "GPU Edge", "browser-fixture:gpu:edge",
+                QuantityKind.Temperature, UnitCode.Celsius, "hwmon"),
+            new CalculatedSensorDefinition(
+                "temperature.gpu.scaled", "Scaled GPU", "temperature.gpu.edge * 2",
+                QuantityKind.Temperature, UnitCode.Celsius));
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/calculations/temperature.gpu.scaled");
+
+        var immutableResponse = await PostForm(
+            client,
+            "/calculations/temperature.gpu.scaled?handler=Save",
+            token,
+            new Dictionary<string, string>
+            {
+                ["Input.Key"] = "temperature.gpu.renamed",
+                ["Input.DisplayName"] = "Renamed GPU",
+                ["Input.Formula"] = "temperature.gpu.edge * 3",
+                ["Input.Revision"] = "0"
+            });
+        var immutableHtml = await immutableResponse.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, immutableResponse.StatusCode);
+        Assert.Contains("keys are immutable", immutableHtml, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("temperature.gpu.edge * 2", Assert.Single(
+            new JsonTelemetryConfigurationStore(_configPath).Load().CalculatedSensors).Formula);
+
+        token = GetAntiforgeryToken(immutableHtml);
+        var savedResponse = await PostForm(
+            client,
+            "/calculations/temperature.gpu.scaled?handler=Save",
+            token,
+            new Dictionary<string, string>
+            {
+                ["Input.Key"] = "temperature.gpu.scaled",
+                ["Input.DisplayName"] = "Scaled GPU x3",
+                ["Input.Formula"] = "temperature.gpu.edge * 3",
+                ["Input.Revision"] = "0"
+            });
+
+        Assert.Equal(HttpStatusCode.Redirect, savedResponse.StatusCode);
+        var saved = Assert.Single(new JsonTelemetryConfigurationStore(_configPath).Load().CalculatedSensors);
+        Assert.Equal("temperature.gpu.scaled", saved.Key);
+        Assert.Equal("Scaled GPU x3", saved.DisplayName);
+        Assert.Equal("temperature.gpu.edge * 3", saved.Formula);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-a-revision")]
+    public async Task CalculationSaveRequiresValidSubmittedRevision(string? submittedRevision)
+    {
+        SaveConfiguration(new SensorAliasDefinition(
+            "temperature.gpu.edge", "GPU Edge", "browser-fixture:gpu:edge",
+            QuantityKind.Temperature, UnitCode.Celsius, "hwmon"));
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/calculations");
+        var values = new Dictionary<string, string>
+        {
+            ["Input.Key"] = "temperature.gpu.scaled",
+            ["Input.DisplayName"] = "Scaled GPU",
+            ["Input.Formula"] = "temperature.gpu.edge * 2"
+        };
+        if (submittedRevision is not null)
+        {
+            values["Input.Revision"] = submittedRevision;
+        }
+
+        var response = await PostForm(client, "/calculations?handler=Save", token, values);
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("A valid configuration revision is required", html, StringComparison.Ordinal);
+        Assert.Contains("Scaled GPU", html, StringComparison.Ordinal);
+        Assert.Empty(_factory.Services.GetRequiredService<CalculatedSensorRegistry>().GetDefinitions());
+        Assert.Equal(0, _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>().GetStatus().Revision);
+        Assert.Empty(new JsonTelemetryConfigurationStore(_configPath).Load().CalculatedSensors);
+    }
+
+    [Fact]
+    public async Task StaleCalculationFormPreservesInputAndDoesNotOverwriteNewerConfiguration()
+    {
+        SaveConfiguration(
+            new SensorAliasDefinition(
+                "temperature.gpu.edge", "GPU Edge", "browser-fixture:gpu:edge",
+                QuantityKind.Temperature, UnitCode.Celsius, "hwmon"),
+            new CalculatedSensorDefinition(
+                "temperature.gpu.scaled", "Scaled GPU", "temperature.gpu.edge * 2",
+                QuantityKind.Temperature, UnitCode.Celsius));
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/calculations/temperature.gpu.scaled");
+        var apiResponse = await client.PutAsJsonAsync(
+            "/api/calculations/temperature.gpu.other",
+            new { displayName = "Other GPU", formula = "temperature.gpu.edge * 4" });
+        apiResponse.EnsureSuccessStatusCode();
+
+        var staleResponse = await PostForm(
+            client,
+            "/calculations/temperature.gpu.scaled?handler=Save",
+            token,
+            new Dictionary<string, string>
+            {
+                ["Input.Key"] = "temperature.gpu.scaled",
+                ["Input.DisplayName"] = "Preserved scaled GPU",
+                ["Input.Formula"] = "temperature.gpu.edge * 3",
+                ["Input.Revision"] = "0"
+            });
+        var html = await staleResponse.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, staleResponse.StatusCode);
+        Assert.Contains("Reload and review", html, StringComparison.Ordinal);
+        Assert.Contains("Preserved scaled GPU", html, StringComparison.Ordinal);
+        var definitions = new JsonTelemetryConfigurationStore(_configPath).Load().CalculatedSensors;
+        Assert.Equal(2, definitions.Count);
+        Assert.Equal("temperature.gpu.edge * 2", definitions.Single(
+            definition => definition.Key == "temperature.gpu.scaled").Formula);
+    }
+
+    [Fact]
+    public async Task CalculationPersistenceFailureLeavesFileAndRegistryUnchanged()
+    {
+        SaveConfiguration(
+            new SensorAliasDefinition(
+                "temperature.gpu.edge", "GPU Edge", "browser-fixture:gpu:edge",
+                QuantityKind.Temperature, UnitCode.Celsius, "hwmon"),
+            new CalculatedSensorDefinition(
+                "temperature.gpu.scaled", "Original Scaled GPU", "temperature.gpu.edge * 2",
+                QuantityKind.Temperature, UnitCode.Celsius));
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/calculations/temperature.gpu.scaled");
+        Directory.CreateDirectory($"{_configPath}.previous");
+
+        var response = await PostForm(
+            client,
+            "/calculations/temperature.gpu.scaled?handler=Save",
+            token,
+            new Dictionary<string, string>
+            {
+                ["Input.Key"] = "temperature.gpu.scaled",
+                ["Input.DisplayName"] = "Replacement Scaled GPU",
+                ["Input.Formula"] = "temperature.gpu.edge * 3",
+                ["Input.Revision"] = "0"
+            });
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("active file and in-memory configuration were unchanged", html, StringComparison.Ordinal);
+        Assert.Equal("Original Scaled GPU", Assert.Single(
+            new JsonTelemetryConfigurationStore(_configPath).Load().CalculatedSensors).DisplayName);
+        Assert.Equal("Original Scaled GPU", _factory.Services
+            .GetRequiredService<CalculatedSensorRegistry>()
+            .GetDefinition("temperature.gpu.scaled")?.DisplayName);
+        Assert.Equal(0, _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>().GetStatus().Revision);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-a-revision")]
+    public async Task CalculationDeleteRequiresValidSubmittedRevision(string? submittedRevision)
+    {
+        SaveConfiguration(
+            new SensorAliasDefinition(
+                "temperature.gpu.edge", "GPU Edge", "browser-fixture:gpu:edge",
+                QuantityKind.Temperature, UnitCode.Celsius, "hwmon"),
+            new CalculatedSensorDefinition(
+                "temperature.gpu.scaled", "Scaled GPU", "temperature.gpu.edge * 2",
+                QuantityKind.Temperature, UnitCode.Celsius));
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/calculations/temperature.gpu.scaled");
+        var values = new Dictionary<string, string> { ["ConfirmDelete"] = "true" };
+        if (submittedRevision is not null)
+        {
+            values["Input.Revision"] = submittedRevision;
+        }
+
+        var response = await PostForm(
+            client, "/calculations/temperature.gpu.scaled?handler=Delete", token, values);
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("A valid configuration revision is required", html, StringComparison.Ordinal);
+        Assert.NotNull(_factory.Services.GetRequiredService<CalculatedSensorRegistry>()
+            .GetDefinition("temperature.gpu.scaled"));
+        Assert.Single(new JsonTelemetryConfigurationStore(_configPath).Load().CalculatedSensors);
+        Assert.Equal(0, _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>().GetStatus().Revision);
+    }
+
+    [Fact]
+    public async Task CalculationDeleteIsConfirmedNonCascadingAndDependentBecomesMissing()
+    {
+        SaveConfiguration(
+            [new SensorAliasDefinition(
+                "temperature.gpu.edge", "GPU Edge", "browser-fixture:gpu:edge",
+                QuantityKind.Temperature, UnitCode.Celsius, "hwmon")],
+            [
+                new CalculatedSensorDefinition(
+                    "temperature.gpu.base", "Base GPU", "temperature.gpu.edge * 2",
+                    QuantityKind.Temperature, UnitCode.Celsius),
+                new CalculatedSensorDefinition(
+                    "temperature.gpu.dependent", "Dependent GPU", "temperature.gpu.base * 2",
+                    QuantityKind.Temperature, UnitCode.Celsius)
+            ]);
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/calculations/temperature.gpu.base");
+        var values = new Dictionary<string, string> { ["Input.Revision"] = "0" };
+
+        var warningResponse = await PostForm(
+            client, "/calculations/temperature.gpu.base?handler=Delete", token, values);
+        var warningHtml = await warningResponse.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, warningResponse.StatusCode);
+        Assert.Contains("Deletion does not cascade", warningHtml, StringComparison.Ordinal);
+        Assert.Contains("temperature.gpu.dependent", warningHtml, StringComparison.Ordinal);
+
+        values["ConfirmDelete"] = "true";
+        token = GetAntiforgeryToken(warningHtml);
+        var deletedResponse = await PostForm(
+            client, "/calculations/temperature.gpu.base?handler=Delete", token, values);
+
+        Assert.Equal(HttpStatusCode.Redirect, deletedResponse.StatusCode);
+        var saved = new JsonTelemetryConfigurationStore(_configPath).Load();
+        Assert.Equal("temperature.gpu.dependent", Assert.Single(saved.CalculatedSensors).Key);
+        var dependent = _factory.Services.GetRequiredService<CalculatedSensorCatalog>()
+            .GetSensorByAlias("temperature.gpu.dependent");
+        Assert.Equal(SensorStatus.MissingDependency, dependent?.Status);
+        var dependentHtml = await client.GetStringAsync("/calculations/temperature.gpu.dependent");
+        Assert.Contains("MissingDependency", dependentHtml, StringComparison.Ordinal);
+        Assert.Contains("temperature.gpu.base", dependentHtml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CalculationValidationShowsDependencyWarningsAndEncodesFormulaErrors()
+    {
+        SaveConfiguration(new SensorAliasDefinition(
+            "temperature.gpu.stale", "Stale GPU", "browser-fixture:gpu:junction",
+            QuantityKind.Temperature, UnitCode.Celsius, "hwmon"));
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/calculations");
+        var validValues = new Dictionary<string, string>
+        {
+            ["Input.Key"] = "temperature.gpu.warning",
+            ["Input.DisplayName"] = "Warning GPU",
+            ["Input.Formula"] = "temperature.gpu.stale * 2",
+            ["Input.Revision"] = "0"
+        };
+
+        var warningResponse = await PostForm(
+            client, "/calculations?handler=Validate", token, validValues);
+        var warningHtml = await warningResponse.Content.ReadAsStringAsync();
+        Assert.Contains("Current dependency state may block a reading", warningHtml, StringComparison.Ordinal);
+        Assert.Contains("Stale", warningHtml, StringComparison.Ordinal);
+
+        token = GetAntiforgeryToken(warningHtml);
+        validValues["Input.Formula"] = "temperature.gpu.stale + <script>alert(1)</script>";
+        var errorResponse = await PostForm(
+            client, "/calculations?handler=Validate", token, validValues);
+        var errorHtml = await errorResponse.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, errorResponse.StatusCode);
+        Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", errorHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("<script>alert(1)</script>", errorHtml, StringComparison.Ordinal);
+        Assert.Empty(_factory.Services.GetRequiredService<CalculatedSensorRegistry>().GetDefinitions());
+    }
+
+    [Fact]
+    public async Task CalculationPageShowsAuthoritativeCalculationErrorDetail()
+    {
+        SaveConfiguration(
+            new SensorAliasDefinition(
+                "power.gpu.board", "GPU Board Power", "browser-fixture:gpu:power",
+                QuantityKind.Power, UnitCode.Watts, "hwmon"),
+            new CalculatedSensorDefinition(
+                "temperature.bad.metadata", "Bad <metadata>", "power.gpu.board * 2",
+                QuantityKind.Temperature, UnitCode.Celsius));
+        using var client = _factory.CreateClient();
+
+        var html = await client.GetStringAsync("/calculations/temperature.bad.metadata");
+
+        Assert.Contains("CalculationError", html, StringComparison.Ordinal);
+        Assert.Contains("result type changed", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Bad &lt;metadata&gt;", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Bad <metadata>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CalculationWritesRequireAntiforgeryToken()
+    {
+        using var client = CreateNoRedirectClient();
+
+        var response = await client.PostAsync(
+            "/calculations?handler=Save",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["Input.Key"] = "value.scalar",
+                ["Input.DisplayName"] = "Scalar",
+                ["Input.Formula"] = "1",
+                ["Input.Revision"] = "0"
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(_factory.Services.GetRequiredService<CalculatedSensorRegistry>().GetDefinitions());
+    }
+
+    [Fact]
     public async Task SensorsPageLinksPhysicalReadingsToAliasWorkflows()
     {
         using var client = _factory.CreateClient();
@@ -387,20 +737,6 @@ public sealed class BrowserPagesTests : IDisposable
 
         Assert.Contains("/aliases?targetId=browser-fixture%3Agpu%3Aedge", html, StringComparison.Ordinal);
         Assert.Contains("Create alias", html, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData("/calculations", "not implemented in Slice 7A")]
-    public async Task DeferredNavigationDestinationsRenderWithoutWriteControls(string path, string message)
-    {
-        using var client = _factory.CreateClient();
-
-        var response = await client.GetAsync(path);
-        var html = await response.Content.ReadAsStringAsync();
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(message, html, StringComparison.Ordinal);
-        Assert.DoesNotContain("<form", html, StringComparison.OrdinalIgnoreCase);
     }
 
     public void Dispose()
@@ -446,6 +782,17 @@ public sealed class BrowserPagesTests : IDisposable
         {
             Aliases = [alias],
             CalculatedSensors = calculation is null ? [] : [calculation]
+        });
+    }
+
+    private void SaveConfiguration(
+        IReadOnlyList<SensorAliasDefinition> aliases,
+        IReadOnlyList<CalculatedSensorDefinition> calculations)
+    {
+        new JsonTelemetryConfigurationStore(_configPath).Save(new TelemetryConfigurationDocument
+        {
+            Aliases = [.. aliases],
+            CalculatedSensors = [.. calculations]
         });
     }
 

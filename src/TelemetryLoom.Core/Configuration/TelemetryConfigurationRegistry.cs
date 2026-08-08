@@ -97,8 +97,27 @@ public sealed class TelemetryConfigurationRegistry
 
     public void UpdateCalculatedSensors(IReadOnlyCollection<CalculatedSensorDefinition> calculatedSensors)
     {
+        UpdateCalculatedSensorsCore(calculatedSensors, null);
+    }
+
+    public void UpdateCalculatedSensors(
+        IReadOnlyCollection<CalculatedSensorDefinition> calculatedSensors,
+        long expectedRevision)
+    {
+        UpdateCalculatedSensorsCore(calculatedSensors, expectedRevision);
+    }
+
+    private void UpdateCalculatedSensorsCore(
+        IReadOnlyCollection<CalculatedSensorDefinition> calculatedSensors,
+        long? expectedRevision)
+    {
         lock (_gate)
         {
+            if (expectedRevision is { } revision)
+            {
+                EnsureRevisionCore(revision);
+            }
+
             var next = _document with
             {
                 Aliases = [.. _document.Aliases],
