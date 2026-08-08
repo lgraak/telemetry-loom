@@ -1,46 +1,79 @@
 @page
+@model IndexModel
 @{
-    ViewData["Title"] = "Telemetry Loom";
+    ViewData["Title"] = "Overview";
+    ViewData["ActivePage"] = "Overview";
 }
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Telemetry Loom</title>
-    <style>
-        :root { color-scheme: dark; font-family: system-ui, sans-serif; }
-        body { max-width: 72rem; margin: 0 auto; padding: 3rem 1.5rem; background: #111827; color: #e5e7eb; }
-        h1 { margin-bottom: .25rem; }
-        p { color: #9ca3af; }
-        table { width: 100%; border-collapse: collapse; margin-top: 2rem; background: #1f2937; }
-        th, td { padding: .8rem; text-align: left; border-bottom: 1px solid #374151; }
-        th { color: #93c5fd; }
-        code { color: #a7f3d0; }
-    </style>
-</head>
-<body>
-    <h1>Telemetry Loom</h1>
-    <p>Telemetry Loom is running. Linux hwmon sensors, durable aliases, and the development sensor are exposed by the local API.</p>
-    <table>
-        <thead><tr><th>Sensor</th><th>Alias</th><th>Value</th><th>Quantity</th><th>Status</th></tr></thead>
-        <tbody id="sensors"><tr><td colspan="5">Loading…</td></tr></tbody>
-    </table>
-    <script>
-        async function refresh() {
-            const response = await fetch('/api/sensors');
-            const sensors = await response.json();
-            document.querySelector('#sensors').innerHTML = sensors.map(sensor => `
-                <tr>
-                    <td><code>${sensor.id}</code><br>${sensor.displayName}</td>
-                    <td><code>${sensor.alias ?? ''}</code></td>
-                    <td>${sensor.value ?? '—'} ${sensor.unitSymbol}</td>
-                    <td>${sensor.quantity}</td>
-                    <td>${sensor.status}</td>
-                </tr>`).join('');
-        }
-        refresh();
-        setInterval(refresh, 1000);
-    </script>
-</body>
-</html>
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Local administration</p>
+        <h1>Telemetry Loom is running</h1>
+        <p class="lede">Normalized sensor data, durable configuration, and live snapshots are available on this host.</p>
+    </div>
+    <span class="status-badge status-available">Available</span>
+</section>
+
+<section class="summary-grid" aria-label="Service summary">
+    <article class="summary-card">
+        <span class="summary-label">Current sensors</span>
+        <strong class="summary-value">@Model.SensorCount</strong>
+        <a asp-page="/Sensors">Browse live readings</a>
+    </article>
+    <article class="summary-card">
+        <span class="summary-label">Configuration schema</span>
+        <strong class="summary-value">v@Model.Configuration.SchemaVersion</strong>
+        <span>Loaded successfully</span>
+    </article>
+    <article class="summary-card">
+        <span class="summary-label">Process revision</span>
+        <strong class="summary-value">@Model.Configuration.Revision</strong>
+        <span>Resets when the service restarts</span>
+    </article>
+</section>
+
+<section class="panel" aria-labelledby="configuration-heading">
+    <div class="panel-heading">
+        <div>
+            <p class="eyebrow">Read-only status</p>
+            <h2 id="configuration-heading">Configuration</h2>
+        </div>
+    </div>
+
+    <dl class="detail-list">
+        <div>
+            <dt>Active configuration</dt>
+            <dd><code>@Model.Configuration.ActivePath</code></dd>
+        </div>
+        <div>
+            <dt>Loaded at</dt>
+            <dd><time datetime="@Model.Configuration.LoadedAt.ToString("O")">@Model.Configuration.LoadedAt.ToString("u")</time></dd>
+        </div>
+        <div>
+            <dt>Last successful save</dt>
+            <dd>
+                @if (Model.Configuration.LastSuccessfulSaveAt is { } savedAt)
+                {
+                    <time datetime="@savedAt.ToString("O")">@savedAt.ToString("u")</time>
+                }
+                else
+                {
+                    <span>None since startup</span>
+                }
+            </dd>
+        </div>
+        <div>
+            <dt>Previous configuration</dt>
+            <dd>
+                <code>@Model.Configuration.PreviousPath</code>
+                <span class="inline-state">@(Model.Configuration.PreviousExists ? "Available" : "Not present")</span>
+            </dd>
+        </div>
+    </dl>
+</section>
+
+<section class="notice" aria-labelledby="recovery-heading">
+    <h2 id="recovery-heading">Configuration and recovery</h2>
+    <p>Out-of-process edits are not loaded while Telemetry Loom is running. Stop and restart the service after any deliberate file edit.</p>
+    <p>If the active configuration becomes invalid, startup fails rather than loading the previous file automatically. Stop the service, inspect both paths above, deliberately restore the valid file, and restart.</p>
+</section>

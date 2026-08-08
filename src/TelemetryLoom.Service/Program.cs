@@ -62,6 +62,7 @@ var app = builder.Build();
 _ = app.Services.GetRequiredService<SensorAliasRegistry>();
 _ = app.Services.GetRequiredService<CalculatedSensorRegistry>();
 
+app.UseStaticFiles();
 app.MapRazorPages();
 app.MapGet("/api/sensors", (TelemetrySensorCatalog catalog) => catalog.GetSensors());
 app.MapGet("/api/sensors/stream", SensorStreamEndpoint.Stream);

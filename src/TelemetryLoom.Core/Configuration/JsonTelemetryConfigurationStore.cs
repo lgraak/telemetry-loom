@@ -3,7 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace TelemetryLoom.Core.Configuration;
 
-public sealed class JsonTelemetryConfigurationStore(string path) : ITelemetryConfigurationStore
+public sealed class JsonTelemetryConfigurationStore(string path) :
+    ITelemetryConfigurationStore,
+    ITelemetryConfigurationStoreMetadata
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -14,7 +16,9 @@ public sealed class JsonTelemetryConfigurationStore(string path) : ITelemetryCon
     };
 
     public string Path { get; } = System.IO.Path.GetFullPath(path);
+    public string ActivePath => Path;
     public string PreviousPath => $"{Path}.previous";
+    public bool PreviousExists => File.Exists(PreviousPath);
 
     public TelemetryConfigurationDocument Load()
     {

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TelemetryLoom.Contracts.Sensors;
+using TelemetryLoom.Core.Configuration;
 using TelemetryLoom.Core.Sensors;
 
 namespace TelemetryLoom.Core.Tests;
@@ -116,6 +117,35 @@ public sealed class AliasApiTests : IDisposable
 
         Assert.Equal(HttpStatusCode.BadRequest, invalidKey.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, missingSensor.StatusCode);
+    }
+
+    [Fact]
+    public async Task RestWriteAdvancesProcessLocalConfigurationRevision()
+    {
+        using var client = _factory.CreateClient();
+        var configuration = _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>();
+        Assert.Equal(0, configuration.GetStatus().Revision);
+
+        var invalid = await client.PutAsJsonAsync(
+            "/api/aliases/Invalid%20Key",
+            new
+            {
+                displayName = "Invalid",
+                sensorId = SimulatedSensorSource.TemperatureSensorId
+            });
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal(0, configuration.GetStatus().Revision);
+
+        var response = await client.PutAsJsonAsync(
+            "/api/aliases/browser.revision",
+            new
+            {
+                displayName = "Browser Revision",
+                sensorId = SimulatedSensorSource.TemperatureSensorId
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, configuration.GetStatus().Revision);
     }
 
     [Fact]

@@ -124,18 +124,25 @@ public sealed class SensorAliasRegistryTests
         var source = new MutableSensorSource(CreateReading());
         var sensors = new SensorCatalog([source]);
         var store = new JsonTelemetryConfigurationStore(path);
-        var registry = CreateRegistry(sensors, store);
+        var configuration = new TelemetryConfigurationRegistry(store);
+        var registry = new SensorAliasRegistry(sensors, configuration);
 
         try
         {
             registry.Upsert("cooling.air.intake", "Original Name", "fixture:temperature:1");
+            var statusBeforeFailure = configuration.GetStatus();
             Directory.CreateDirectory(store.PreviousPath);
 
-            Assert.ThrowsAny<IOException>(() =>
+            var exception = Record.Exception(() =>
                 registry.Upsert("cooling.air.intake", "Changed Name", "fixture:temperature:1"));
 
+            Assert.True(
+                exception is IOException or UnauthorizedAccessException,
+                $"Expected a persistence exception, but received {exception?.GetType().FullName ?? "no exception"}.");
             Assert.Equal("Original Name", Assert.Single(registry.GetDefinitions()).DisplayName);
             Assert.Equal("Original Name", Assert.Single(store.Load().Aliases).DisplayName);
+            Assert.Equal(statusBeforeFailure.Revision, configuration.GetStatus().Revision);
+            Assert.Equal(statusBeforeFailure.LastSuccessfulSaveAt, configuration.GetStatus().LastSuccessfulSaveAt);
             Assert.Empty(Directory.EnumerateFiles(root, "*.tmp"));
         }
         finally

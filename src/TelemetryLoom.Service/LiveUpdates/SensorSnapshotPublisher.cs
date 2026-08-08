@@ -17,6 +17,14 @@ public sealed class SensorSnapshotPublisher(
     private SensorSnapshot? _latest;
     private long _sequence;
 
+    public SensorSnapshot? GetLatestSnapshot()
+    {
+        lock (_gate)
+        {
+            return _latest;
+        }
+    }
+
     public async IAsyncEnumerable<SensorSnapshot> Subscribe(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {

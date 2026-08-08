@@ -1,0 +1,159 @@
+@page "/sensors"
+@model SensorsModel
+@{
+    ViewData["Title"] = "Sensors";
+    ViewData["ActivePage"] = "Sensors";
+    var hasVisibleReadings = Model.Groups.SelectMany(group => group.Readings).Any(Model.IsVisible);
+}
+
+<section class="page-heading sensors-heading">
+    <div>
+        <p class="eyebrow">Complete current snapshot</p>
+        <h1>Sensors</h1>
+        <p class="lede">Browse normalized readings by device while retaining access to their stable identities and source metadata.</p>
+    </div>
+    <div class="stream-status" aria-live="polite">
+        <span id="stream-state" class="status-badge status-disconnected">Disconnected</span>
+        <span>Snapshot <time id="snapshot-time" datetime="@Model.Snapshot.CapturedAt.ToString("O")">@Model.Snapshot.CapturedAt.ToString("u")</time></span>
+    </div>
+</section>
+
+<form class="filter-panel" method="get" data-sensor-filters>
+    <label class="search-field">
+        <span>Search readings</span>
+        <input type="search" name="q" value="@Model.Q" placeholder="Name, alias, ID, device, source…" autocomplete="off" data-filter-search />
+    </label>
+    <label>
+        <span>Status</span>
+        <select name="status" data-filter-status>
+            <option value="">All statuses</option>
+            @foreach (var option in Model.StatusOptions)
+            {
+                <option value="@option" selected="@(string.Equals(Model.Status, option, StringComparison.OrdinalIgnoreCase))">@option</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Quantity</span>
+        <select name="quantity" data-filter-quantity>
+            <option value="">All quantities</option>
+            @foreach (var option in Model.QuantityOptions)
+            {
+                <option value="@option" selected="@(string.Equals(Model.Quantity, option, StringComparison.OrdinalIgnoreCase))">@option</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Device</span>
+        <select name="device" data-filter-device>
+            <option value="">All devices</option>
+            @foreach (var option in Model.DeviceOptions)
+            {
+                <option value="@option.Value" selected="@(string.Equals(Model.Device, option.Value, StringComparison.Ordinal))">@option.Label</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Origin</span>
+        <select name="origin" data-filter-origin>
+            <option value="">All origins</option>
+            <option value="Physical" selected="@(string.Equals(Model.Origin, "Physical", StringComparison.OrdinalIgnoreCase))">Physical</option>
+            <option value="Calculated" selected="@(string.Equals(Model.Origin, "Calculated", StringComparison.OrdinalIgnoreCase))">Calculated</option>
+        </select>
+    </label>
+    <button class="button" type="submit">Apply filters</button>
+</form>
+
+<p id="empty-filter-state" class="empty-state" hidden="@hasVisibleReadings">No readings match the current filters.</p>
+
+<div id="sensor-groups" class="sensor-groups">
+    @foreach (var group in Model.Groups)
+    {
+        var groupVisible = group.Readings.Any(Model.IsVisible);
+        <section class="sensor-group" data-sensor-group data-device-key="@group.Key" hidden="@(!groupVisible)">
+            <div class="sensor-group-heading">
+                <div>
+                    <p class="eyebrow">@group.Category</p>
+                    <h2>@group.DisplayName</h2>
+                </div>
+                <span class="sensor-count">@group.Readings.Count reading@(group.Readings.Count == 1 ? string.Empty : "s")</span>
+            </div>
+            <div class="table-scroll">
+                <table class="sensor-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Reading</th>
+                            <th scope="col">Value</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Last update</th>
+                            <th scope="col">Context</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var reading in group.Readings)
+                        {
+                            var visible = Model.IsVisible(reading);
+                            <tr data-sensor-row
+                                data-search="@reading.SearchText"
+                                data-status="@reading.Status"
+                                data-quantity="@reading.Quantity"
+                                data-device="@reading.DeviceKey"
+                                data-origin="@reading.Origin"
+                                hidden="@(!visible)">
+                                <td>
+                                    <strong class="sensor-name">@reading.DisplayName</strong>
+                                    <span class="sensor-subtitle">Raw: @reading.RawLabel</span>
+                                    <details class="sensor-details">
+                                        <summary>Identity and description</summary>
+                                        @if (!string.IsNullOrWhiteSpace(reading.Description))
+                                        {
+                                            <p>@reading.Description</p>
+                                        }
+                                        <div class="id-line">
+                                            <code>@reading.Id</code>
+                                            <button class="copy-button" type="button" data-copy-value="@reading.Id">Copy ID</button>
+                                        </div>
+                                        @if (!string.IsNullOrWhiteSpace(reading.Confidence))
+                                        {
+                                            <span>Confidence: @reading.Confidence</span>
+                                        }
+                                    </details>
+                                </td>
+                                <td class="sensor-value">
+                                    <span>@reading.DisplayValue</span>
+                                    @if (reading.DisplayValue != "—")
+                                    {
+                                        <span class="unit">@reading.UnitSymbol</span>
+                                    }
+                                    <span class="sensor-subtitle">@reading.Quantity</span>
+                                </td>
+                                <td><span class="status-badge status-@reading.Status.ToLowerInvariant()">@reading.Status</span></td>
+                                <td>
+                                    @if (reading.LastSuccessfulUpdate is { } updatedAt)
+                                    {
+                                        <time datetime="@updatedAt.ToString("O")">@updatedAt.ToString("u")</time>
+                                    }
+                                    else
+                                    {
+                                        <span>Never</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span>@reading.Origin · @reading.Source</span>
+                                    @if (!string.IsNullOrWhiteSpace(reading.Alias))
+                                    {
+                                        <code class="alias-key">@reading.Alias</code>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/sensors.js" asp-append-version="true"></script>
+}

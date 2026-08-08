@@ -29,6 +29,7 @@ public sealed class SensorSnapshotPublisherTests
         Assert.Equal(SensorSnapshot.CurrentSchemaVersion, first.Current.SchemaVersion);
         Assert.Single(first.Current.Sensors);
         Assert.Equal(1, source.ReadCount);
+        Assert.Same(first.Current, publisher.GetLatestSnapshot());
         await publisher.StopAsync(CancellationToken.None);
     }
 
