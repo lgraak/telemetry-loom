@@ -143,6 +143,11 @@
                                     @if (!string.IsNullOrWhiteSpace(reading.Alias))
                                     {
                                         <code class="alias-key">@reading.Alias</code>
+                                        <a class="sensor-action" asp-page="/Aliases" asp-route-key="@reading.Alias">Manage alias</a>
+                                    }
+                                    else if (reading.Origin == "Physical")
+                                    {
+                                        <a class="sensor-action" asp-page="/Aliases" asp-route-targetId="@reading.Id">Create alias</a>
                                     }
                                 </td>
                             </tr>

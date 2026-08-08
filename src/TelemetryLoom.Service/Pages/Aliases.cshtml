@@ -1,4 +1,5 @@
-@page "/aliases"
+@page "/aliases/{key?}"
+@model AliasesModel
 @{
     ViewData["Title"] = "Aliases";
     ViewData["ActivePage"] = "Aliases";
@@ -6,13 +7,168 @@
 
 <section class="page-heading">
     <div>
-        <p class="eyebrow">Milestone 7</p>
+        <p class="eyebrow">Stable formula identities</p>
         <h1>Aliases</h1>
-        <p class="lede">Alias management is intentionally not implemented in Slice 7A.</p>
+        <p class="lede">Bind stable alias keys to physical sensors, rename their display names, and review calculation impact before rebinding or deletion.</p>
     </div>
+    <a class="button button-link" asp-page="/Aliases" asp-route-key="">Create alias</a>
 </section>
 
-<section class="empty-panel">
-    <h2>Browser editing comes next</h2>
-    <p>This navigation destination is reserved for the approved alias workflow. Existing alias REST APIs and behavior are unchanged.</p>
-</section>
+@if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+{
+    <div class="notice notice-success" role="status">@Model.SuccessMessage</div>
+}
+
+<div class="alias-workspace">
+    <section class="panel alias-list-panel">
+        <div class="panel-heading">
+            <div>
+                <p class="eyebrow">Configured</p>
+                <h2>@Model.AliasList.Count alias@(Model.AliasList.Count == 1 ? string.Empty : "es")</h2>
+            </div>
+            <span class="revision-label">Revision @Model.Configuration.Revision</span>
+        </div>
+        @if (Model.AliasList.Count == 0)
+        {
+            <p class="empty-state">No aliases are configured.</p>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="alias-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Alias</th>
+                            <th scope="col">Target</th>
+                            <th scope="col">Status</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var alias in Model.AliasList)
+                        {
+                            <tr>
+                                <td><strong>@alias.DisplayName</strong><code>@alias.Key</code></td>
+                                <td><code>@alias.SensorId</code><span class="sensor-subtitle">@alias.Quantity · @alias.UnitSymbol</span></td>
+                                <td><span class="status-badge status-@alias.Status.ToString().ToLowerInvariant()">@alias.Status</span></td>
+                                <td><a asp-page="/Aliases" asp-route-key="@alias.Key">Edit</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <section class="panel alias-editor">
+        <p class="eyebrow">@(Model.IsEditing ? "Edit alias" : "Create alias")</p>
+        <h2>@(Model.IsEditing ? Model.CurrentAlias!.DisplayName : "New physical-sensor alias")</h2>
+        <form method="post" asp-page-handler="Save" asp-route-key="@(Model.IsEditing ? Model.CurrentAlias!.Key : null)">
+            <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+            <input asp-for="Input.Revision" type="hidden" />
+
+            @if (Model.IsEditing)
+            {
+                <label>
+                    <span>Alias key</span>
+                    <code class="immutable-value">@Model.Input.Key</code>
+                    <input asp-for="Input.Key" type="hidden" />
+                    <span class="field-note">Keys are immutable and remain the formula contract.</span>
+                </label>
+            }
+            else
+            {
+                <label>
+                    <span>Alias key</span>
+                    <input asp-for="Input.Key" autocomplete="off" placeholder="temperature.gpu.edge" />
+                    <span asp-validation-for="Input.Key" class="field-error"></span>
+                    <span class="field-note">Lowercase alphanumeric segments separated by dots or underscores.</span>
+                </label>
+            }
+
+            <label>
+                <span>Display name</span>
+                <input asp-for="Input.DisplayName" autocomplete="off" />
+                <span asp-validation-for="Input.DisplayName" class="field-error"></span>
+            </label>
+
+            <label>
+                <span>Physical target</span>
+                <select asp-for="Input.SensorId">
+                    <option value="">Select a physical sensor</option>
+                    @foreach (var target in Model.TargetOptions)
+                    {
+                        var assignedElsewhere = target.AssignedAlias is not null &&
+                                                !string.Equals(target.AssignedAlias, Model.Input.Key, StringComparison.Ordinal);
+                        <option value="@target.Id" disabled="@assignedElsewhere">
+                            @target.DisplayName · @target.DeviceName · @target.Quantity @target.UnitSymbol · @target.Status@(target.IsMissing ? " · retained missing target" : string.Empty)@(assignedElsewhere ? $" · assigned to {target.AssignedAlias}" : string.Empty)
+                        </option>
+                    }
+                </select>
+                <span asp-validation-for="Input.SensorId" class="field-error"></span>
+                <span class="field-note">The stable sensor ID is submitted and persisted. Labels are presentation only.</span>
+            </label>
+
+            @if (Model.RebindRequiresConfirmation)
+            {
+                <div class="notice notice-danger">
+                    <h3>Quantity or unit change</h3>
+                    <p>This rebind changes the alias type. The authoritative registries will revalidate the write.</p>
+                    @if (Model.DirectDependents.Count > 0)
+                    {
+                        <p>Directly affected calculated sensors:</p>
+                        <ul>
+                            @foreach (var dependent in Model.DirectDependents)
+                            {
+                                <li><strong>@dependent.DisplayName</strong> <code>@dependent.Key</code></li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p>No calculated sensors directly depend on this alias.</p>
+                    }
+                    <label class="confirmation-field">
+                        <input asp-for="Input.ConfirmRebindImpact" />
+                        <span>I reviewed the type change and want to rebind this alias.</span>
+                    </label>
+                    <span asp-validation-for="Input.ConfirmRebindImpact" class="field-error"></span>
+                </div>
+            }
+
+            <button class="button" type="submit">@(Model.IsEditing ? "Save alias" : "Create alias")</button>
+        </form>
+
+        @if (Model.IsEditing)
+        {
+            <section class="delete-panel">
+                <h3>Delete alias</h3>
+                <p>Deletion does not cascade. Dependent calculations remain configured and will report <code>MissingDependency</code>.</p>
+                @if (Model.DirectDependents.Count > 0)
+                {
+                    <p>Direct calculated dependents:</p>
+                    <ul>
+                        @foreach (var dependent in Model.DirectDependents)
+                        {
+                            <li><strong>@dependent.DisplayName</strong> <code>@dependent.Key</code></li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p>No calculated sensors directly depend on this alias.</p>
+                }
+                <form method="post" asp-page-handler="Delete" asp-route-key="@Model.CurrentAlias!.Key">
+                    <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+                    <input asp-for="Input.Revision" type="hidden" />
+                    <label class="confirmation-field">
+                        <input asp-for="ConfirmDelete" />
+                        <span>I understand deletion is non-cascading and want to delete this alias.</span>
+                    </label>
+                    <span asp-validation-for="ConfirmDelete" class="field-error"></span>
+                    <button class="button button-danger" type="submit">Delete alias</button>
+                </form>
+            </section>
+        }
+    </section>
+</div>

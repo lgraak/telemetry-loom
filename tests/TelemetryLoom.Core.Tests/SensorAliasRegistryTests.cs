@@ -106,6 +106,59 @@ public sealed class SensorAliasRegistryTests
     }
 
     [Fact]
+    public void ConditionalUpsertAndDeleteAtCurrentRevisionPersist()
+    {
+        var sensors = new SensorCatalog([new MutableSensorSource(CreateReading())]);
+        var store = new MemoryConfigurationStore();
+        var configuration = new TelemetryConfigurationRegistry(store);
+        var registry = new SensorAliasRegistry(sensors, configuration);
+
+        var alias = registry.Upsert(
+            "cooling.air.intake", "Intake", "fixture:temperature:1", expectedRevision: 0);
+
+        Assert.Equal("cooling.air.intake", alias.Key);
+        Assert.Equal(1, configuration.GetStatus().Revision);
+        Assert.True(registry.Delete("cooling.air.intake", expectedRevision: 1));
+        Assert.Equal(2, configuration.GetStatus().Revision);
+        Assert.Empty(registry.GetDefinitions());
+        Assert.Empty(store.Load().Aliases);
+    }
+
+    [Fact]
+    public void StaleConditionalUpsertAndDeleteLeaveDiskAndAliasesUnchanged()
+    {
+        var root = CreateTemporaryDirectory();
+        var path = Path.Combine(root, "config.json");
+        var sensors = new SensorCatalog([new MutableSensorSource(CreateReading())]);
+        var store = new JsonTelemetryConfigurationStore(path);
+        var configuration = new TelemetryConfigurationRegistry(store);
+        var registry = new SensorAliasRegistry(sensors, configuration);
+
+        try
+        {
+            registry.Upsert("cooling.air.intake", "Original", "fixture:temperature:1");
+            var fileBefore = File.ReadAllText(path);
+            var definitionsBefore = registry.GetDefinitions();
+            var statusBefore = configuration.GetStatus();
+
+            Assert.Throws<ConfigurationRevisionConflictException>(() =>
+                registry.Upsert(
+                    "cooling.air.intake", "Replacement", "fixture:temperature:1", expectedRevision: 0));
+            Assert.Throws<ConfigurationRevisionConflictException>(() =>
+                registry.Delete("cooling.air.intake", expectedRevision: 0));
+
+            Assert.Equal(fileBefore, File.ReadAllText(path));
+            Assert.Equal(definitionsBefore, registry.GetDefinitions());
+            Assert.Equal(statusBefore, configuration.GetStatus());
+            Assert.False(File.Exists($"{path}.previous"));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void FailedPersistenceDoesNotChangeInMemoryAliases()
     {
         var sensors = new SensorCatalog([new MutableSensorSource(CreateReading())]);
