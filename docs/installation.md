@@ -56,7 +56,9 @@ The packaged service explicitly uses:
 
 ```text
 TelemetryLoom__ConfigPath=/var/lib/telemetry-loom/config.json
-Kestrel__Endpoints__Http__Url=http://127.0.0.1:5198
+TelemetryLoom__Access__Mode=LocalOnly
+TelemetryLoom__Access__ListenAddress=127.0.0.1
+TelemetryLoom__Access__Port=5198
 ```
 
 Running Telemetry Loom interactively outside this unit still uses its existing per-user default configuration path.
@@ -90,6 +92,43 @@ curl -N http://127.0.0.1:5198/api/sensors/stream
 
 The browser supports sensor inspection plus alias and calculated-sensor management. REST and SSE contracts are the same as source-run installations.
 
+## Controlled LAN read access
+
+`LocalOnly` is the default. To allow another trusted LAN machine to read telemetry, create or edit `/etc/telemetry-loom/telemetry-loom.env` with one explicit address assigned to this host:
+
+```text
+TelemetryLoom__Access__Mode=LanReadOnly
+TelemetryLoom__Access__ListenAddress=192.168.10.45
+TelemetryLoom__Access__Port=5198
+```
+
+Replace `192.168.10.45` with the specific address chosen by the administrator. Telemetry Loom preserves `127.0.0.1:5198` for local administration and adds only the selected LAN listener. Wildcard, malformed, multicast, and loopback-only `LanReadOnly` addresses fail startup. The service does not discover interfaces or accept the legacy `Kestrel:Endpoints` configuration as a second listener source.
+
+Restart and verify the exact listeners:
+
+```bash
+sudo systemctl restart telemetry-loom
+ss -ltn | grep 5198
+curl http://127.0.0.1:5198/api/status
+curl http://192.168.10.45:5198/api/status
+```
+
+Expected output includes both `127.0.0.1:5198` and the selected address, with no `0.0.0.0:5198` or `[::]:5198` listener. The status response additively reports the active access mode, listener URLs, port, and whether remote clients are read-only.
+
+Remote clients may use Overview, Sensors, `GET /api/status`, `GET /api/sensors`, `GET /api/sensors/stream`, `GET /api/aliases`, and `GET /api/calculations`. The browser visibly reports `Remote read-only`; alias and calculation administration pages are unavailable. Crafted remote mutation requests receive HTTP 403. Local requests through loopback retain the existing administrative browser and API behavior.
+
+There is no authentication or TLS. Any client able to reach the configured LAN address and port can read the exposed telemetry. Use `LanReadOnly` only on a trusted network. Firewall policy is the administrator's responsibility; the installer does not add, remove, or inspect firewall rules.
+
+To revert to the default, remove the three access overrides or set them to:
+
+```text
+TelemetryLoom__Access__Mode=LocalOnly
+TelemetryLoom__Access__ListenAddress=127.0.0.1
+TelemetryLoom__Access__Port=5198
+```
+
+Restart the service and use `ss -ltn | grep 5198` to confirm that the LAN listener is gone and loopback remains available.
+
 ## Configuration and optional overrides
 
 Use the browser or REST API to change aliases and calculations while the service is running. Configuration writes are atomic. When an active document exists, the preceding contents are retained as `config.json.previous`. A failed write leaves the active file and in-memory configuration unchanged.
@@ -109,7 +148,7 @@ Optional .NET configuration overrides can be placed in `/etc/telemetry-loom/tele
 TelemetryLoom__LiveUpdates__IntervalMilliseconds=2000
 ```
 
-After editing it, restart the service. Do not change the Kestrel listener to a non-loopback address. Remote administration, authentication, TLS, firewall changes, and reverse proxies are not part of the supported deployment.
+After editing it, restart the service. Use the typed access settings above rather than raw Kestrel endpoint variables. Remote administration, authentication, TLS, automated firewall changes, and reverse proxies are not part of the supported deployment.
 
 ## Upgrade or reinstall
 
@@ -262,7 +301,7 @@ ss -ltnp | grep 5198
 curl -v http://127.0.0.1:5198/api/status
 ```
 
-The expected listener is only `127.0.0.1:5198`. A port conflict appears in journald. Stop the conflicting local service or, for local-only testing, select another loopback port in the environment file. Do not bind to `0.0.0.0`.
+In `LocalOnly`, the expected listener is only `127.0.0.1:5198`. In `LanReadOnly`, expect loopback plus exactly the configured LAN address. A port conflict or address-not-assigned error appears in journald. Select an address actually assigned to the host; do not bind to `0.0.0.0`.
 
 ### Configuration is not persisted
 

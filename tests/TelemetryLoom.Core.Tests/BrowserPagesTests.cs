@@ -35,7 +35,10 @@ public sealed class BrowserPagesTests : IDisposable
                     ["Hwmon:RootPath"] = Path.Combine(_root, "missing-hwmon")
                 }));
             builder.ConfigureServices(services =>
-                services.AddSingleton<ISensorSource>(new BrowserFixtureSensorSource()));
+            {
+                services.AddSingleton<ISensorSource>(new BrowserFixtureSensorSource());
+                services.AddSingleton<IStartupFilter, TestRemoteAddressStartupFilter>();
+            });
         });
     }
 
@@ -86,6 +89,7 @@ public sealed class BrowserPagesTests : IDisposable
         Assert.Contains("/api/sensors/stream", script, StringComparison.Ordinal);
         Assert.DoesNotContain("fetch(\"/api/sensors\"", script, StringComparison.Ordinal);
         Assert.Contains("Manage alias", script, StringComparison.Ordinal);
+        Assert.Contains("canAdminister", script, StringComparison.Ordinal);
         Assert.Contains("encodeURIComponent(reading.alias)", script, StringComparison.Ordinal);
         Assert.Contains("encodeURIComponent(reading.id)", script, StringComparison.Ordinal);
     }

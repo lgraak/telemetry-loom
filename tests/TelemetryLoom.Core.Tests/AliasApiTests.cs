@@ -34,7 +34,10 @@ public sealed class AliasApiTests : IDisposable
                     ["Hwmon:RootPath"] = missingHwmonRoot
                 }));
             builder.ConfigureServices(services =>
-                services.AddSingleton<ISensorSource>(new ApiFixtureSensorSource()));
+            {
+                services.AddSingleton<ISensorSource>(new ApiFixtureSensorSource());
+                services.AddSingleton<IStartupFilter, TestRemoteAddressStartupFilter>();
+            });
         });
     }
 

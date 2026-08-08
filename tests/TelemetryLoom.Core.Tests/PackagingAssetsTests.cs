@@ -8,6 +8,7 @@ public sealed class PackagingAssetsTests
     public void SystemdUnitUsesUnprivilegedLocalhostServiceContract()
     {
         var unit = Read("packaging", "telemetry-loom.service");
+        var settings = Read("src", "TelemetryLoom.Service", "appsettings.json");
 
         Assert.Contains("After=network.target", unit, StringComparison.Ordinal);
         Assert.Contains("User=telemetry-loom", unit, StringComparison.Ordinal);
@@ -20,9 +21,16 @@ public sealed class PackagingAssetsTests
             unit,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Kestrel__Endpoints__Http__Url=http://127.0.0.1:5198",
+            "TelemetryLoom__Access__Mode=LocalOnly",
             unit,
             StringComparison.Ordinal);
+        Assert.Contains("TelemetryLoom__Access__ListenAddress=127.0.0.1", unit, StringComparison.Ordinal);
+        Assert.Contains("TelemetryLoom__Access__Port=5198", unit, StringComparison.Ordinal);
+        Assert.DoesNotContain("Kestrel__Endpoints", unit, StringComparison.Ordinal);
+        Assert.Contains("\"Mode\": \"LocalOnly\"", settings, StringComparison.Ordinal);
+        Assert.Contains("\"ListenAddress\": \"127.0.0.1\"", settings, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"Kestrel\"", settings, StringComparison.Ordinal);
+        Assert.DoesNotContain("0.0.0.0", unit, StringComparison.Ordinal);
         Assert.Contains("StateDirectory=telemetry-loom", unit, StringComparison.Ordinal);
         Assert.Contains("ProtectSystem=strict", unit, StringComparison.Ordinal);
     }

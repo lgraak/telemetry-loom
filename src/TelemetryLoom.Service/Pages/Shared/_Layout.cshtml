@@ -1,6 +1,8 @@
 @{
     var activePage = ViewData["ActivePage"] as string;
     var title = ViewData["Title"] as string;
+    var requestAuthority = RequestAuthorityClassifier.Classify(Context);
+    var canAdminister = requestAuthority == RequestAuthority.LocalAdmin;
 }
 <!doctype html>
 <html lang="en">
@@ -11,7 +13,7 @@
     <title>@(string.IsNullOrWhiteSpace(title) ? "Telemetry Loom" : $"{title} · Telemetry Loom")</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body>
+<body data-access-authority="@requestAuthority">
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
         <div class="header-inner">
@@ -19,23 +21,33 @@
                 <span class="brand-mark" aria-hidden="true"></span>
                 <span>
                     <strong>Telemetry Loom</strong>
-                    <small>Local sensor administration</small>
+                    <small>@(canAdminister ? "Local sensor administration" : "Remote telemetry")</small>
                 </span>
             </a>
             <nav class="site-nav" aria-label="Primary navigation">
                 <a asp-page="/Index" aria-current="@(activePage == "Overview" ? "page" : null)">Overview</a>
                 <a asp-page="/Sensors" aria-current="@(activePage == "Sensors" ? "page" : null)">Sensors</a>
-                <a asp-page="/Aliases" asp-route-key="" aria-current="@(activePage == "Aliases" ? "page" : null)">Aliases</a>
-                <a asp-page="/Calculations" asp-route-key="" aria-current="@(activePage == "Calculations" ? "page" : null)">Calculations</a>
+                @if (canAdminister)
+                {
+                    <a asp-page="/Aliases" asp-route-key="" aria-current="@(activePage == "Aliases" ? "page" : null)">Aliases</a>
+                    <a asp-page="/Calculations" asp-route-key="" aria-current="@(activePage == "Calculations" ? "page" : null)">Calculations</a>
+                }
             </nav>
         </div>
     </header>
+    @if (!canAdminister)
+    {
+        <aside class="access-banner" role="status">
+            <strong>Remote read-only</strong>
+            <span>Telemetry is available. Configuration changes require local access on the Telemetry Loom host.</span>
+        </aside>
+    }
     <main id="main-content" class="site-main">
         @RenderBody()
     </main>
     <footer class="site-footer">
         <span>Telemetry Loom</span>
-        <span>Localhost administration interface</span>
+        <span>@(canAdminister ? "Local administration interface" : "Trusted-LAN read-only interface")</span>
     </footer>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

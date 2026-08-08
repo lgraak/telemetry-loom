@@ -6,6 +6,7 @@
     const streamState = document.querySelector("#stream-state");
     const snapshotTime = document.querySelector("#snapshot-time");
     const emptyState = document.querySelector("#empty-filter-state");
+    const canAdminister = document.body.dataset.accessAuthority === "LocalAdmin";
 
     if (!groupsRoot || !filterForm || !streamState || !snapshotTime || !emptyState) {
         return;
@@ -165,15 +166,19 @@
         contextCell.append(element("span", null, `${reading.origin} · ${reading.source}`));
         if (reading.origin === "Calculated") {
             contextCell.append(element("code", "alias-key", reading.alias));
-            const manageLink = element("a", "sensor-action", "Manage calculation");
-            manageLink.href = `/calculations/${encodeURIComponent(reading.alias)}`;
-            contextCell.append(manageLink);
+            if (canAdminister) {
+                const manageLink = element("a", "sensor-action", "Manage calculation");
+                manageLink.href = `/calculations/${encodeURIComponent(reading.alias)}`;
+                contextCell.append(manageLink);
+            }
         } else if (reading.alias) {
             contextCell.append(element("code", "alias-key", reading.alias));
-            const manageLink = element("a", "sensor-action", "Manage alias");
-            manageLink.href = `/aliases/${encodeURIComponent(reading.alias)}`;
-            contextCell.append(manageLink);
-        } else if (reading.origin === "Physical") {
+            if (canAdminister) {
+                const manageLink = element("a", "sensor-action", "Manage alias");
+                manageLink.href = `/aliases/${encodeURIComponent(reading.alias)}`;
+                contextCell.append(manageLink);
+            }
+        } else if (reading.origin === "Physical" && canAdminister) {
             const createLink = element("a", "sensor-action", "Create alias");
             createLink.href = `/aliases?targetId=${encodeURIComponent(reading.id)}`;
             contextCell.append(createLink);
