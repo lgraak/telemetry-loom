@@ -49,6 +49,8 @@ public sealed class BrowserPagesTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("Telemetry Loom is running", html, StringComparison.Ordinal);
+        Assert.Contains(">v1</strong>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("v@Model.Configuration.SchemaVersion", html, StringComparison.Ordinal);
         Assert.Contains(_configPath, html, StringComparison.Ordinal);
         Assert.Contains($"{_configPath}.previous", html, StringComparison.Ordinal);
         Assert.Contains("None since startup", html, StringComparison.Ordinal);

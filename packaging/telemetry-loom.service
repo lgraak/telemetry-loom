@@ -1,13 +1,30 @@
 [Unit]
 Description=Telemetry Loom local sensor service
-After=default.target
+After=network.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/telemetry-loom
+User=telemetry-loom
+Group=telemetry-loom
+WorkingDirectory=/opt/telemetry-loom
+ExecStart=/opt/telemetry-loom/TelemetryLoom.Service
 Restart=on-failure
-RestartSec=3
+RestartSec=5s
 Environment=DOTNET_ENVIRONMENT=Production
+Environment=TelemetryLoom__ConfigPath=/var/lib/telemetry-loom/config.json
+Environment=Kestrel__Endpoints__Http__Url=http://127.0.0.1:5198
+EnvironmentFile=-/etc/telemetry-loom/telemetry-loom.env
+StateDirectory=telemetry-loom
+StateDirectoryMode=0750
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+StandardOutput=journal
+StandardError=journal
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
