@@ -41,3 +41,5 @@ DELETE /api/calculations/{key}
 ```
 
 Keys use lowercase alphanumeric segments separated by dots or underscores. Hyphens are not allowed because `-` is the subtraction operator.
+
+Calculated-sensor writes require a loopback/local connection. In LAN read-only mode, remote clients may list and resolve definitions and readings, but create, replace, and delete requests return HTTP 403.

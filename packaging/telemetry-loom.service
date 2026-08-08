@@ -12,7 +12,9 @@ Restart=on-failure
 RestartSec=5s
 Environment=DOTNET_ENVIRONMENT=Production
 Environment=TelemetryLoom__ConfigPath=/var/lib/telemetry-loom/config.json
-Environment=Kestrel__Endpoints__Http__Url=http://127.0.0.1:5198
+Environment=TelemetryLoom__Access__Mode=LocalOnly
+Environment=TelemetryLoom__Access__ListenAddress=127.0.0.1
+Environment=TelemetryLoom__Access__Port=5198
 EnvironmentFile=-/etc/telemetry-loom/telemetry-loom.env
 StateDirectory=telemetry-loom
 StateDirectoryMode=0750

@@ -45,7 +45,7 @@ Allowed values are 100 through 60000 milliseconds. Invalid values fail startup r
 
 Event IDs are monotonic only for the lifetime of one service process. Milestone 5 does not retain history and does not replay `Last-Event-ID`. A reconnect receives a fresh complete snapshot immediately. Consumers should treat service restart or sequence regression as a new stream, not as data loss that can be replayed.
 
-The stream is localhost-only under the same Kestrel policy as the REST API. No separate streaming port or authentication behavior is introduced.
+The stream follows the same product access policy as the REST API. It is localhost-only by default and is remotely readable only when an administrator explicitly enables trusted-LAN read-only mode. No separate streaming port, authentication, or TLS behavior is introduced.
 
 ## Why SSE
 

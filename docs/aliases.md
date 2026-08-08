@@ -41,6 +41,8 @@ Delete an alias:
 curl -X DELETE http://127.0.0.1:5198/api/aliases/cooling.air.intake
 ```
 
+Alias writes require a loopback/local connection. When the service is explicitly configured for LAN read-only access, remote clients may list and resolve aliases but create, replace, and delete requests return HTTP 403.
+
 Creating an alias or rebinding one to a different sensor requires the target sensor to be visible. An existing alias can still be renamed while its bound hardware is missing.
 
 ## Persistence

@@ -1,6 +1,6 @@
 # Telemetry Loom
 
-Telemetry Loom is a localhost-only Linux service that turns hardware sensor data into stable, typed telemetry for browser users and consumers such as [InfoPanel](https://github.com/lgraak/InfoPanel.TelemetryLoom).
+Telemetry Loom is a localhost-only-by-default Linux service that turns hardware sensor data into stable, typed telemetry for browser users and consumers such as [InfoPanel](https://github.com/lgraak/InfoPanel.TelemetryLoom).
 
 It provides:
 
@@ -23,9 +23,11 @@ sudo ./install.sh --start
 systemctl status telemetry-loom
 ```
 
-Use the `linux-arm64` archive on 64-bit ARM systems. Open `http://127.0.0.1:5198` on the installed machine. The service remains bound to localhost.
+Use the `linux-arm64` archive on 64-bit ARM systems. Open `http://127.0.0.1:5198` on the installed machine. The packaged default remains bound only to localhost.
 
 See [the installation guide](docs/installation.md) for native dependencies, upgrades, logs, configuration, uninstall, and troubleshooting.
+
+Trusted-LAN telemetry access is an explicit read-only opt-in. It binds one administrator-selected LAN address while preserving local administration on `127.0.0.1`. There is no authentication or TLS, so any client that can reach that address and port can read the exposed telemetry. See [controlled LAN read access](docs/installation.md#controlled-lan-read-access).
 
 ## Build from source
 
@@ -70,6 +72,6 @@ Public behavior is documented in:
 
 ## Project status
 
-Milestones 1 through 7 are complete. Milestone 8 adds self-contained Linux release packaging, systemd deployment, lifecycle documentation, and installation validation. NVML, history, alerts, authentication, TLS, and remote administration remain outside the current scope.
+Milestones 1 through 8 are complete. Milestone 9 adds controlled trusted-LAN read access while preserving localhost-only defaults and local-only administration. NVML, history, alerts, authentication, TLS, and remote administration remain outside the current scope.
 
 Telemetry Loom is licensed under GPL-3.0. See [LICENSE](LICENSE).

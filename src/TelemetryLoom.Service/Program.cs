@@ -5,11 +5,36 @@ using TelemetryLoom.Core.Configuration;
 using TelemetryLoom.Core.Calculations;
 using TelemetryLoom.Core.Sensors;
 using TelemetryLoom.Core.Presentation;
+using TelemetryLoom.Service.Access;
 using TelemetryLoom.Service.LiveUpdates;
 
 var builder = WebApplication.CreateBuilder(args);
+var accessPolicy = AccessPolicy.FromConfiguration(builder.Configuration);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    foreach (var address in accessPolicy.ListenAddresses)
+    {
+        options.Listen(address, accessPolicy.Port);
+    }
+});
 
-builder.Services.AddRazorPages();
+builder.Services.AddSingleton(accessPolicy);
+builder.Services.AddSingleton<RequestAuthorityClassifier>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, AccessAuthorizationHandler>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, AccessAuthorizationResultHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AccessPolicies.Read, policy =>
+        policy.AddRequirements(new AccessRequirement(RequestAuthority.RemoteRead)));
+    options.AddPolicy(AccessPolicies.LocalAdmin, policy =>
+        policy.AddRequirements(new AccessRequirement(RequestAuthority.LocalAdmin)));
+    options.FallbackPolicy = options.GetPolicy(AccessPolicies.LocalAdmin);
+});
+builder.Services.AddRazorPages(options =>
+{
+    options.Conventions.AuthorizePage("/Index", AccessPolicies.Read);
+    options.Conventions.AuthorizePage("/Sensors", AccessPolicies.Read);
+});
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSingleton<SimulatedSensorSource>();
@@ -63,32 +88,52 @@ _ = app.Services.GetRequiredService<SensorAliasRegistry>();
 _ = app.Services.GetRequiredService<CalculatedSensorRegistry>();
 
 app.UseStaticFiles();
+app.UseAuthorization();
 app.MapRazorPages();
-app.MapGet("/api/sensors", (TelemetrySensorCatalog catalog) => catalog.GetSensors());
-app.MapGet("/api/sensors/stream", SensorStreamEndpoint.Stream);
+app.MapGet("/api/sensors", (TelemetrySensorCatalog catalog) => catalog.GetSensors())
+    .RequireAuthorization(AccessPolicies.Read);
+app.MapGet("/api/sensors/stream", SensorStreamEndpoint.Stream)
+    .RequireAuthorization(AccessPolicies.Read);
 app.MapGet("/api/sensors/by-alias/{key}", (string key, TelemetrySensorCatalog catalog) =>
-    catalog.GetSensorByAlias(key) is { } sensor ? Results.Ok(sensor) : Results.NotFound());
+    catalog.GetSensorByAlias(key) is { } sensor ? Results.Ok(sensor) : Results.NotFound())
+    .RequireAuthorization(AccessPolicies.Read);
 app.MapGet("/api/sensors/{id}", (string id, TelemetrySensorCatalog catalog) =>
-    catalog.GetSensor(id) is { } sensor ? Results.Ok(sensor) : Results.NotFound());
-app.MapGet("/api/aliases", (SensorAliasRegistry aliases) => aliases.GetAliases());
+    catalog.GetSensor(id) is { } sensor ? Results.Ok(sensor) : Results.NotFound())
+    .RequireAuthorization(AccessPolicies.Read);
+app.MapGet("/api/aliases", (SensorAliasRegistry aliases) => aliases.GetAliases())
+    .RequireAuthorization(AccessPolicies.Read);
 app.MapGet("/api/aliases/{key}", (string key, SensorAliasRegistry aliases) =>
-    aliases.GetAlias(key) is { } alias ? Results.Ok(alias) : Results.NotFound());
-app.MapPut("/api/aliases/{key}", UpsertAlias);
+    aliases.GetAlias(key) is { } alias ? Results.Ok(alias) : Results.NotFound())
+    .RequireAuthorization(AccessPolicies.Read);
+app.MapPut("/api/aliases/{key}", UpsertAlias)
+    .RequireAuthorization(AccessPolicies.LocalAdmin);
 app.MapDelete("/api/aliases/{key}", (string key, SensorAliasRegistry aliases) =>
-    aliases.Delete(key) ? Results.NoContent() : Results.NotFound());
-app.MapGet("/api/calculations", (CalculatedSensorRegistry calculations) => calculations.GetDefinitions());
+    aliases.Delete(key) ? Results.NoContent() : Results.NotFound())
+    .RequireAuthorization(AccessPolicies.LocalAdmin);
+app.MapGet("/api/calculations", (CalculatedSensorRegistry calculations) => calculations.GetDefinitions())
+    .RequireAuthorization(AccessPolicies.Read);
 app.MapGet("/api/calculations/{key}", (string key, CalculatedSensorRegistry calculations) =>
-    calculations.GetDefinition(key) is { } calculation ? Results.Ok(calculation) : Results.NotFound());
-app.MapPut("/api/calculations/{key}", UpsertCalculation);
+    calculations.GetDefinition(key) is { } calculation ? Results.Ok(calculation) : Results.NotFound())
+    .RequireAuthorization(AccessPolicies.Read);
+app.MapPut("/api/calculations/{key}", UpsertCalculation)
+    .RequireAuthorization(AccessPolicies.LocalAdmin);
 app.MapDelete("/api/calculations/{key}", (string key, CalculatedSensorRegistry calculations) =>
-    calculations.Delete(key) ? Results.NoContent() : Results.NotFound());
-app.MapGet("/api/status", (TelemetrySensorCatalog catalog) => Results.Ok(new
+    calculations.Delete(key) ? Results.NoContent() : Results.NotFound())
+    .RequireAuthorization(AccessPolicies.LocalAdmin);
+app.MapGet("/api/status", (TelemetrySensorCatalog catalog, AccessPolicy currentAccessPolicy) => Results.Ok(new
 {
     service = "telemetry-loom",
     status = "available",
     sensorCount = catalog.GetSensors().Count,
-    collectors = catalog.SourceNames
-}));
+    collectors = catalog.SourceNames,
+    access = new
+    {
+        mode = currentAccessPolicy.Mode.ToString(),
+        listenAddresses = currentAccessPolicy.ListenUrls,
+        port = currentAccessPolicy.Port,
+        remoteClientsReadOnly = currentAccessPolicy.RemoteClientsReadOnly
+    }
+})).RequireAuthorization(AccessPolicies.Read);
 
 app.Run();
 

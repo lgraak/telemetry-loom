@@ -3,15 +3,38 @@
 @{
     ViewData["Title"] = "Overview";
     ViewData["ActivePage"] = "Overview";
+    var canAdminister = RequestAuthorityClassifier.Classify(HttpContext) == RequestAuthority.LocalAdmin;
 }
 
 <section class="page-heading">
     <div>
-        <p class="eyebrow">Local administration</p>
+        <p class="eyebrow">@(canAdminister ? "Local administration" : "Remote telemetry")</p>
         <h1>Telemetry Loom is running</h1>
-        <p class="lede">Normalized sensor data, durable configuration, and live snapshots are available on this host.</p>
+        <p class="lede">@(canAdminister
+            ? "Normalized sensor data, durable configuration, and live snapshots are available on this host."
+            : "Normalized sensor data and live snapshots are available through this read-only connection.")</p>
     </div>
     <span class="status-badge status-available">Available</span>
+</section>
+
+<section class="panel" aria-labelledby="access-heading">
+    <div class="panel-heading">
+        <div>
+            <p class="eyebrow">Network policy</p>
+            <h2 id="access-heading">Access</h2>
+        </div>
+        <span class="status-badge">@Model.Access.Mode</span>
+    </div>
+    <dl class="detail-list">
+        <div>
+            <dt>Listeners</dt>
+            <dd>@string.Join(", ", Model.Access.ListenUrls)</dd>
+        </div>
+        <div>
+            <dt>LAN clients</dt>
+            <dd>@(Model.Access.RemoteClientsReadOnly ? "Read-only telemetry access" : "Not exposed")</dd>
+        </div>
+    </dl>
 </section>
 
 <section class="summary-grid" aria-label="Service summary">

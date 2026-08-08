@@ -4,6 +4,7 @@
     ViewData["Title"] = "Sensors";
     ViewData["ActivePage"] = "Sensors";
     var hasVisibleReadings = Model.Groups.SelectMany(group => group.Readings).Any(Model.IsVisible);
+    var canAdminister = RequestAuthorityClassifier.Classify(HttpContext) == RequestAuthority.LocalAdmin;
 }
 
 <section class="page-heading sensors-heading">
@@ -143,16 +144,25 @@
                                     @if (reading.Origin == "Calculated")
                                     {
                                         <code class="alias-key">@reading.Alias</code>
-                                        <a class="sensor-action" asp-page="/Calculations" asp-route-key="@reading.Alias">Manage calculation</a>
+                                        @if (canAdminister)
+                                        {
+                                            <a class="sensor-action" asp-page="/Calculations" asp-route-key="@reading.Alias">Manage calculation</a>
+                                        }
                                     }
                                     else if (!string.IsNullOrWhiteSpace(reading.Alias))
                                     {
                                         <code class="alias-key">@reading.Alias</code>
-                                        <a class="sensor-action" asp-page="/Aliases" asp-route-key="@reading.Alias">Manage alias</a>
+                                        @if (canAdminister)
+                                        {
+                                            <a class="sensor-action" asp-page="/Aliases" asp-route-key="@reading.Alias">Manage alias</a>
+                                        }
                                     }
                                     else if (reading.Origin == "Physical")
                                     {
-                                        <a class="sensor-action" asp-page="/Aliases" asp-route-targetId="@reading.Id">Create alias</a>
+                                        @if (canAdminister)
+                                        {
+                                            <a class="sensor-action" asp-page="/Aliases" asp-route-targetId="@reading.Id">Create alias</a>
+                                        }
                                     }
                                 </td>
                             </tr>

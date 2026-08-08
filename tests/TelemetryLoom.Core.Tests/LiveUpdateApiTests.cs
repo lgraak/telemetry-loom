@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TelemetryLoom.Core.Tests;
 
@@ -93,13 +94,17 @@ public sealed class LiveUpdateApiTests : IDisposable
 
     private WebApplicationFactory<Program> CreateFactory(int intervalMilliseconds) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
             builder.ConfigureAppConfiguration((_, configuration) =>
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["TelemetryLoom:ConfigPath"] = Path.Combine(_root, $"config-{intervalMilliseconds}.json"),
                     ["Hwmon:RootPath"] = Path.Combine(_root, "missing-hwmon"),
                     ["TelemetryLoom:LiveUpdates:IntervalMilliseconds"] = intervalMilliseconds.ToString()
-                })));
+                }));
+            builder.ConfigureServices(services =>
+                services.AddSingleton<IStartupFilter, TestRemoteAddressStartupFilter>());
+        });
 
     private sealed record SseEvent(long Id, string Json);
 }

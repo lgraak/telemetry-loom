@@ -49,3 +49,11 @@ Mappings live in a small typed registry until their size or update cadence justi
 Live updates use Server-Sent Events at `/api/sensors/stream`. Telemetry flow is one-way, so WebSockets would add protocol and session complexity without a current requirement.
 
 Each event contains a versioned complete sensor snapshot. Event IDs are monotonic within one process but are not durable. Reconnect sends a fresh snapshot immediately; history and `Last-Event-ID` replay are deferred. The sampling interval is service-wide and bounded from 100 milliseconds to 60 seconds.
+
+## Network access boundary
+
+Telemetry Loom is localhost-only by default. `LocalOnly` binds one loopback address and grants requests arriving from loopback the `LocalAdmin` authority used by existing browser and API workflows.
+
+`LanReadOnly` is an explicit trusted-network opt-in. It preserves the loopback listener and adds one administrator-selected, non-loopback unicast address. Requests are classified from the connection's actual remote IP address. Loopback receives `LocalAdmin`; non-loopback clients receive `RemoteRead`. Host, Origin, Referer, query parameters, and untrusted forwarded headers do not participate in that decision.
+
+Remote readers may observe telemetry through the read APIs, SSE, Overview, and Sensors pages. Alias and calculation mutation remains local-only and remote attempts receive HTTP 403. No authentication or TLS is implied: any client able to reach the selected LAN address and port can read the telemetry.
