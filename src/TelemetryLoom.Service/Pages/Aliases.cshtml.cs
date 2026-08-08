@@ -16,6 +16,8 @@ public sealed class AliasesModel(
     ISensorCatalog physicalSensors,
     TelemetryConfigurationRegistry configuration) : PageModel
 {
+    private const string RevisionFieldName = $"{nameof(Input)}.{nameof(AliasInput.Revision)}";
+
     [BindProperty]
     public AliasInput Input { get; set; } = new();
 
@@ -71,6 +73,12 @@ public sealed class AliasesModel(
             return NotFound();
         }
 
+        if (!TryGetSubmittedRevision(out var revision))
+        {
+            LoadPage(existing?.Key);
+            return Page();
+        }
+
         if (existing is not null && !string.Equals(Input.Key, existing.Key, StringComparison.Ordinal))
         {
             ModelState.AddModelError(nameof(Input.Key), "Alias keys are immutable. Create a new alias to use a different key.");
@@ -107,10 +115,10 @@ public sealed class AliasesModel(
 
         try
         {
-            var saved = aliases.Upsert(Input.Key, Input.DisplayName, targetId, Input.Revision);
-            var revision = configuration.GetStatus().Revision;
+            var saved = aliases.Upsert(Input.Key, Input.DisplayName, targetId, revision);
+            var resultingRevision = configuration.GetStatus().Revision;
             SuccessMessage =
-                $"Saved alias '{saved.Key}' targeting '{saved.SensorId}'. Status: {saved.Status}. Configuration revision: {revision}.";
+                $"Saved alias '{saved.Key}' targeting '{saved.SensorId}'. Status: {saved.Status}. Configuration revision: {resultingRevision}.";
             return RedirectToPage("/Aliases", new { key = saved.Key });
         }
         catch (AliasValidationException exception)
@@ -150,6 +158,13 @@ public sealed class AliasesModel(
             return NotFound();
         }
 
+        if (!TryGetSubmittedRevision(out var revision))
+        {
+            PopulateInput(existing);
+            LoadPage(key);
+            return Page();
+        }
+
         if (!ConfirmDelete)
         {
             ModelState.AddModelError(
@@ -162,7 +177,7 @@ public sealed class AliasesModel(
 
         try
         {
-            if (!aliases.Delete(key, Input.Revision))
+            if (!aliases.Delete(key, revision))
             {
                 return NotFound();
             }
@@ -255,6 +270,31 @@ public sealed class AliasesModel(
                     : string.Empty;
         ModelState.AddModelError(field, message);
     }
+
+    private bool TryGetSubmittedRevision(out long revision)
+    {
+        var revisionBindingIsValid = !ModelState.TryGetValue(RevisionFieldName, out var revisionEntry) ||
+                                     revisionEntry.Errors.Count == 0;
+        if (Input.Revision is { } submittedRevision && revisionBindingIsValid)
+        {
+            if (ModelState.IsValid)
+            {
+                revision = submittedRevision;
+                return true;
+            }
+
+            ModelState.AddModelError(string.Empty, "Correct the invalid submitted values before retrying.");
+            revision = default;
+            return false;
+        }
+
+        ModelState.Remove(RevisionFieldName);
+        ModelState.AddModelError(
+            RevisionFieldName,
+            "A valid configuration revision is required. Reload the page and review the current alias before retrying.");
+        revision = default;
+        return false;
+    }
 }
 
 public sealed class AliasInput
@@ -262,7 +302,7 @@ public sealed class AliasInput
     public string Key { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string SensorId { get; set; } = string.Empty;
-    public long Revision { get; set; }
+    public long? Revision { get; set; }
     public bool ConfirmRebindImpact { get; set; }
 }
 

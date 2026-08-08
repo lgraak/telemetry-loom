@@ -66,6 +66,7 @@
         <form method="post" asp-page-handler="Save" asp-route-key="@(Model.IsEditing ? Model.CurrentAlias!.Key : null)">
             <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
             <input asp-for="Input.Revision" type="hidden" />
+            <span asp-validation-for="Input.Revision" class="field-error"></span>
 
             @if (Model.IsEditing)
             {
@@ -161,6 +162,7 @@
                 <form method="post" asp-page-handler="Delete" asp-route-key="@Model.CurrentAlias!.Key">
                     <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
                     <input asp-for="Input.Revision" type="hidden" />
+                    <span asp-validation-for="Input.Revision" class="field-error"></span>
                     <label class="confirmation-field">
                         <input asp-for="ConfirmDelete" />
                         <span>I understand deletion is non-cascading and want to delete this alias.</span>

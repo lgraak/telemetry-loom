@@ -116,6 +116,101 @@ public sealed class BrowserPagesTests : IDisposable
     }
 
     [Fact]
+    public async Task AliasSaveWithoutRevisionDoesNotWriteAtRevisionZero()
+    {
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/aliases");
+
+        var response = await PostForm(client, "/aliases?handler=Save", token, new Dictionary<string, string>
+        {
+            ["Input.Key"] = "temperature.gpu.edge",
+            ["Input.DisplayName"] = "GPU Edge",
+            ["Input.SensorId"] = "browser-fixture:gpu:edge"
+        });
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("A valid configuration revision is required", html, StringComparison.Ordinal);
+        Assert.Contains("GPU Edge", html, StringComparison.Ordinal);
+        Assert.Empty(_factory.Services.GetRequiredService<SensorAliasRegistry>().GetDefinitions());
+        Assert.Equal(0, _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>().GetStatus().Revision);
+        Assert.False(File.Exists(_configPath));
+    }
+
+    [Fact]
+    public async Task AliasSaveWithMalformedRevisionDoesNotWrite()
+    {
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/aliases");
+
+        var response = await PostForm(client, "/aliases?handler=Save", token, new Dictionary<string, string>
+        {
+            ["Input.Key"] = "temperature.gpu.edge",
+            ["Input.DisplayName"] = "GPU Edge",
+            ["Input.SensorId"] = "browser-fixture:gpu:edge",
+            ["Input.Revision"] = "not-a-revision"
+        });
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("A valid configuration revision is required", html, StringComparison.Ordinal);
+        Assert.Contains("GPU Edge", html, StringComparison.Ordinal);
+        Assert.Empty(_factory.Services.GetRequiredService<SensorAliasRegistry>().GetDefinitions());
+        Assert.Equal(0, _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>().GetStatus().Revision);
+        Assert.False(File.Exists(_configPath));
+    }
+
+    [Fact]
+    public async Task AliasDeleteWithoutRevisionDoesNotDelete()
+    {
+        SaveConfiguration(new SensorAliasDefinition(
+            "temperature.gpu.edge", "GPU Edge", "browser-fixture:gpu:edge",
+            QuantityKind.Temperature, UnitCode.Celsius, "hwmon"));
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/aliases/temperature.gpu.edge");
+
+        var response = await PostForm(
+            client,
+            "/aliases/temperature.gpu.edge?handler=Delete",
+            token,
+            new Dictionary<string, string> { ["ConfirmDelete"] = "true" });
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("A valid configuration revision is required", html, StringComparison.Ordinal);
+        Assert.Single(new JsonTelemetryConfigurationStore(_configPath).Load().Aliases);
+        Assert.Single(_factory.Services.GetRequiredService<SensorAliasRegistry>().GetDefinitions());
+        Assert.Equal(0, _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>().GetStatus().Revision);
+    }
+
+    [Fact]
+    public async Task AliasDeleteWithMalformedRevisionDoesNotDelete()
+    {
+        SaveConfiguration(new SensorAliasDefinition(
+            "temperature.gpu.edge", "GPU Edge", "browser-fixture:gpu:edge",
+            QuantityKind.Temperature, UnitCode.Celsius, "hwmon"));
+        using var client = CreateNoRedirectClient();
+        var token = await GetAntiforgeryToken(client, "/aliases/temperature.gpu.edge");
+
+        var response = await PostForm(
+            client,
+            "/aliases/temperature.gpu.edge?handler=Delete",
+            token,
+            new Dictionary<string, string>
+            {
+                ["ConfirmDelete"] = "true",
+                ["Input.Revision"] = "not-a-revision"
+            });
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("A valid configuration revision is required", html, StringComparison.Ordinal);
+        Assert.Single(new JsonTelemetryConfigurationStore(_configPath).Load().Aliases);
+        Assert.Single(_factory.Services.GetRequiredService<SensorAliasRegistry>().GetDefinitions());
+        Assert.Equal(0, _factory.Services.GetRequiredService<TelemetryConfigurationRegistry>().GetStatus().Revision);
+    }
+
+    [Fact]
     public async Task QuantityChangingRebindRequiresServerConfirmationAndListsDependents()
     {
         SaveConfiguration(
