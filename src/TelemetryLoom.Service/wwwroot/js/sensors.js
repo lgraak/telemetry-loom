@@ -165,6 +165,13 @@
         contextCell.append(element("span", null, `${reading.origin} · ${reading.source}`));
         if (reading.alias) {
             contextCell.append(element("code", "alias-key", reading.alias));
+            const manageLink = element("a", "sensor-action", "Manage alias");
+            manageLink.href = `/aliases/${encodeURIComponent(reading.alias)}`;
+            contextCell.append(manageLink);
+        } else if (reading.origin === "Physical") {
+            const createLink = element("a", "sensor-action", "Create alias");
+            createLink.href = `/aliases?targetId=${encodeURIComponent(reading.id)}`;
+            contextCell.append(createLink);
         }
 
         row.append(identity, valueCell, statusCell, updatedCell, contextCell);

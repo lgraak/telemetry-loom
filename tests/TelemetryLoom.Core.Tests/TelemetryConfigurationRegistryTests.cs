@@ -63,6 +63,61 @@ public sealed class TelemetryConfigurationRegistryTests
     }
 
     [Fact]
+    public void ConditionalWriteAtCurrentRevisionPersistsAndAdvancesRevision()
+    {
+        var store = new MemoryStore();
+        var registry = new TelemetryConfigurationRegistry(store);
+        var alias = new SensorAliasDefinition(
+            "temperature.input", "Input", "fixture:temperature", QuantityKind.Temperature,
+            UnitCode.Celsius, "fixture");
+
+        registry.UpdateAliases([alias], expectedRevision: 0);
+
+        Assert.Equal(alias, Assert.Single(store.Load().Aliases));
+        Assert.Equal(alias, Assert.Single(registry.GetSnapshot().Aliases));
+        Assert.Equal(1, registry.GetStatus().Revision);
+    }
+
+    [Fact]
+    public void StaleConditionalWriteIsRejectedBeforePersistenceAndLeavesFileAndMemoryUnchanged()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "telemetry-loom-tests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(root, "config.json");
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            var store = new JsonTelemetryConfigurationStore(path);
+            var registry = new TelemetryConfigurationRegistry(store);
+            var original = new SensorAliasDefinition(
+                "temperature.input", "Original", "fixture:temperature", QuantityKind.Temperature,
+                UnitCode.Celsius, "fixture");
+            registry.UpdateAliases([original]);
+            var fileBefore = File.ReadAllText(path);
+            var snapshotBefore = registry.GetSnapshot();
+            var statusBefore = registry.GetStatus();
+            var replacement = original with { DisplayName = "Replacement" };
+
+            var exception = Assert.Throws<ConfigurationRevisionConflictException>(() =>
+                registry.UpdateAliases([replacement], expectedRevision: 0));
+
+            Assert.Equal(0, exception.ExpectedRevision);
+            Assert.Equal(1, exception.ActualRevision);
+            Assert.Equal(fileBefore, File.ReadAllText(path));
+            var snapshotAfter = registry.GetSnapshot();
+            Assert.Equal(snapshotBefore.SchemaVersion, snapshotAfter.SchemaVersion);
+            Assert.Equal(snapshotBefore.Aliases, snapshotAfter.Aliases);
+            Assert.Equal(snapshotBefore.CalculatedSensors, snapshotAfter.CalculatedSensors);
+            Assert.Equal(statusBefore, registry.GetStatus());
+            Assert.False(File.Exists($"{path}.previous"));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void FailedPersistenceDoesNotAdvanceRevisionOrSaveTime()
     {
         var registry = new TelemetryConfigurationRegistry(new FailingStore());
